@@ -3,12 +3,17 @@ package com.example.flutter_braintree;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Parcelable;
 
 import com.braintreepayments.api.dropin.DropInActivity;
 import com.braintreepayments.api.dropin.DropInRequest;
 import com.braintreepayments.api.dropin.DropInResult;
+import com.braintreepayments.api.models.GooglePaymentRequest;
 import com.braintreepayments.api.models.PaymentMethodNonce;
+import com.google.android.gms.wallet.TransactionInfo;
+import com.google.android.gms.wallet.WalletConstants;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -114,11 +119,40 @@ public class FlutterBraintreePlugin implements FlutterPlugin, ActivityAware, Met
       intent.putExtra("payPalPaymentUserAction", (String) request.get("payPalPaymentUserAction"));
       intent.putExtra("billingAgreementDescription", (String) request.get("billingAgreementDescription"));
       activity.startActivityForResult(intent, CUSTOM_ACTIVITY_REQUEST_CODE);
+    } else if (call.method.equals("requestGooglePayNonce")) {
+      String authorization = call.argument("authorization");
+      Intent intent = new Intent(activity, FlutterBraintreeCustom.class);
+      intent.putExtra("type", "requestGooglePayNonce");
+      intent.putExtra("authorization", (String) call.argument("authorization"));
+      assert(call.argument("request") instanceof Map);
+      Map request = (Map) call.argument("request");
+      intent.putExtra("totalPrice", (String) request.get("totalPrice"));
+      intent.putExtra("currencyCode", (String) request.get("currencyCode"));
+      intent.putExtra("googleMerchantID", (String) request.get("googleMerchantID"));
+      intent.putExtra("billingAddressRequired", (Boolean) request.get("billingAddressRequired"));
+      activity.startActivityForResult(intent, CUSTOM_ACTIVITY_REQUEST_CODE);
     } else {
       result.notImplemented();
       activeResult = null;
     }
   }
+
+//  private static void readGooglePaymentParameters(DropInRequest dropInRequest, MethodCall call) {
+//    HashMap<String, Object> arg = call.argument("googlePaymentRequest");
+//    if (arg == null) {
+//      dropInRequest.disableGooglePayment();
+//      return;
+//    }
+//    GooglePaymentRequest googlePaymentRequest = new GooglePaymentRequest()
+//            .transactionInfo(TransactionInfo.newBuilder()
+//                    .setTotalPrice((String) arg.get("totalPrice"))
+//                    .setCurrencyCode((String) arg.get("currencyCode"))
+//                    .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
+//                    .build())
+//            .billingAddressRequired((Boolean) arg.get("billingAddressRequired"))
+//            .googleMerchantId((String) arg.get("merchantID"));
+//    dropInRequest.googlePaymentRequest(googlePaymentRequest);
+//  }
 
   @Override
   public boolean onActivityResult(int requestCode, int resultCode, Intent data) {

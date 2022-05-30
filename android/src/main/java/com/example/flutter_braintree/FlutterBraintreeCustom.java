@@ -22,6 +22,8 @@ import com.braintreepayments.api.models.PayPalAccountNonce;
 import com.google.android.gms.wallet.TransactionInfo;
 import com.google.android.gms.wallet.WalletConstants;
 
+import org.json.JSONArray;
+
 import java.util.HashMap;
 
 import io.flutter.plugin.common.MethodCall;
@@ -97,23 +99,20 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
     }
 
     protected void requestGooglePayNonce() {
-        Intent intent = getIntent();
-        
-        GooglePayment.requestPayment(
-                braintreeFragment,
-                readGooglePaymentParameters(intent)
-        );
-    }
+            Intent intent = getIntent();
 
-    private static GooglePaymentRequest readGooglePaymentParameters(Intent intent) {
-        return new GooglePaymentRequest()
-                .transactionInfo(TransactionInfo.newBuilder()
-                        .setTotalPrice((String) intent.getStringExtra("totalPrice"))
-                        .setCurrencyCode((String) intent.getStringExtra("currencyCode"))
-                        .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
-                        .build())
-                .billingAddressRequired((Boolean) (intent.getStringExtra("billingAddressRequired") == "true"))
-                .googleMerchantId((String) intent.getStringExtra("merchantID"));
+            GooglePayment.requestPayment(
+                    braintreeFragment,
+                    new GooglePaymentRequest()
+                            .transactionInfo(TransactionInfo.newBuilder()
+                                    .setTotalPrice((String) intent.getStringExtra("totalPrice"))
+                                    .setCurrencyCode((String) intent.getStringExtra("currencyCode"))
+                                    .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
+                                    .build())
+                            .billingAddressRequired(intent.getBooleanExtra("billingAddressRequired", true))
+                            .googleMerchantId((String) intent.getStringExtra("googleMerchantID"))
+
+            );
     }
 
     @Override

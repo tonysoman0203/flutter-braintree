@@ -4,6 +4,7 @@
 
     <application>
         <activity android:name=".FlutterBraintreeCustom"
+            android:exported="true"
             android:theme="@style/bt_transparent_activity">
         </activity>
     </application>
