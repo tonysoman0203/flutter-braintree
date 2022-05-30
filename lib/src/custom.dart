@@ -45,4 +45,23 @@ class Braintree {
     if (result == null) return null;
     return BraintreePaymentMethodNonce.fromJson(result);
   }
+
+  /// Requests a Apple Pay method nonce.
+  ///
+  /// [authorization] must be either a valid client token or a valid tokenization key.
+  /// [request] should contain all the information necessary for the Apple Pay request.
+  ///
+  /// Returns a [Future] that resolves to a [BraintreePaymentMethodNonce] if the user confirmed the request,
+  /// or `null` if the user canceled the Vault or Checkout flow.
+  static Future<BraintreePaymentMethodNonce?> requestApplePayNonce(
+      String authorization,
+      BraintreeApplePayRequest request,
+      ) async {
+    final result = await _kChannel.invokeMethod('requestApplePayNonce', {
+      'authorization': authorization,
+      'request': request.toJson(),
+    });
+    if (result == null) return null;
+    return BraintreePaymentMethodNonce.fromJson(result);
+  }
 }
