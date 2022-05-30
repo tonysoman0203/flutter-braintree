@@ -29,6 +29,7 @@ class BraintreePaymentMethodNonce {
   });
 
   factory BraintreePaymentMethodNonce.fromJson(dynamic source) {
+    print(source);
     return BraintreePaymentMethodNonce(
       nonce: source['nonce'],
       typeLabel: source['typeLabel'],

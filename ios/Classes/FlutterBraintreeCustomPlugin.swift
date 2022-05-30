@@ -1,7 +1,6 @@
 import Flutter
 import UIKit
 import Braintree
-import BraintreeDropIn
 
 public class FlutterBraintreeCustomPlugin: BaseFlutterBraintreePlugin, FlutterPlugin, BTViewControllerPresentingDelegate {
     
@@ -126,13 +125,20 @@ public class FlutterBraintreeCustomPlugin: BaseFlutterBraintreePlugin, FlutterPl
         
     }
     
-    private func handleApplePayResult(_ result: BTPaymentMethodNonce, flutterResult: FlutterResult) {
-        flutterResult(["paymentMethodNonce": buildPaymentNonceDict(nonce: result)])
+    private func handleApplePayResult(_ nonce: BTPaymentMethodNonce, flutterResult: FlutterResult) {
+        flutterResult(buildPaymentNonceDict(nonce: nonce))
+        self.isHandlingResult = false
     }
     
-    private func setupApplePay(request: [String: Any], flutterResult: FlutterResult) {
+    private func setupApplePay(request: [String: Any], flutterResult: @escaping FlutterResult) {
+        self.completionBlock = flutterResult
+        
         let paymentRequest = PKPaymentRequest()
-        paymentRequest.supportedNetworks = [.visa, .masterCard, .amex, .discover]
+        if let supportedNetworksValueArray = request["supportedNetworks"] as? [Int] {
+            paymentRequest.supportedNetworks = supportedNetworksValueArray.compactMap({ value in
+                return PKPaymentNetwork.mapRequestedNetwork(rawValue: value)
+            })
+        }
         paymentRequest.merchantCapabilities = .capability3DS
         paymentRequest.countryCode = request["countryCode"] as! String
         paymentRequest.currencyCode = request["currencyCode"] as! String
