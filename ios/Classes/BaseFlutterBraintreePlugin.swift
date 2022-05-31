@@ -5,7 +5,9 @@ import BraintreeDropIn
 
 open class BaseFlutterBraintreePlugin: NSObject {
     internal var isHandlingResult = false;
-
+    
+    internal var dataCollector: BTDataCollector?
+    
     /**
      Will get the authorization for the current method call. This will basically check for a  *clientToken*, *tokenizationKey* or *authorization* property on the call.
      This does not take care about sending the error to the Flutter result.
