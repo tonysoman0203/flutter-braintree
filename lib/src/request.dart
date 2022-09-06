@@ -126,6 +126,7 @@ class BraintreeGooglePaymentRequest {
     required this.currencyCode,
     this.billingAddressRequired = true,
     this.googleMerchantID,
+    this.environment
   });
 
   /// Total price of the payment.
@@ -140,12 +141,16 @@ class BraintreeGooglePaymentRequest {
   /// Google Merchant ID. Optional in sandbox, but if set, must be a valid production Google Merchant ID.
   String? googleMerchantID;
 
+  /// Environment - TEST / PRODUCTION
+  String? environment;
+
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
     'totalPrice': totalPrice,
     'currencyCode': currencyCode,
     'billingAddressRequired': billingAddressRequired,
     if (googleMerchantID != null) 'googleMerchantID': googleMerchantID,
+    'environment' : environment ?? "TEST"
   };
 }
 

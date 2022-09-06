@@ -123,6 +123,7 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
                     .setCurrencyCode((String) arg.get("currencyCode"))
                     .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
                     .build())
+            .environment((String) arg.get("environment"))
             .billingAddressRequired((Boolean) arg.get("billingAddressRequired"))
             .googleMerchantId((String) arg.get("merchantID"));
     dropInRequest.googlePaymentRequest(googlePaymentRequest);
