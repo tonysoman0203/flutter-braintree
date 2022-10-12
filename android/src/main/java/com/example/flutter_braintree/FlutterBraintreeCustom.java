@@ -4,21 +4,26 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.braintreepayments.api.BraintreeFragment;
 import com.braintreepayments.api.Card;
 import com.braintreepayments.api.GooglePayment;
 import com.braintreepayments.api.PayPal;
-import com.braintreepayments.api.dropin.DropInRequest;
-import com.braintreepayments.api.exceptions.InvalidArgumentException;
+import com.braintreepayments.api.ThreeDSecure;
 import com.braintreepayments.api.interfaces.BraintreeCancelListener;
 import com.braintreepayments.api.interfaces.BraintreeErrorListener;
 import com.braintreepayments.api.interfaces.PaymentMethodNonceCreatedListener;
+import com.braintreepayments.api.interfaces.ThreeDSecureLookupListener;
 import com.braintreepayments.api.models.CardBuilder;
+import com.braintreepayments.api.models.CardNonce;
+import com.braintreepayments.api.models.GooglePaymentCardNonce;
 import com.braintreepayments.api.models.GooglePaymentRequest;
 import com.braintreepayments.api.models.PayPalRequest;
 import com.braintreepayments.api.models.PaymentMethodNonce;
 import com.braintreepayments.api.models.PayPalAccountNonce;
+import com.braintreepayments.api.models.ThreeDSecureLookup;
+import com.braintreepayments.api.models.ThreeDSecureRequest;
 import com.google.android.gms.wallet.TransactionInfo;
 import com.google.android.gms.wallet.WalletConstants;
 
@@ -38,6 +43,8 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
         try {
             Intent intent = getIntent();
             braintreeFragment = BraintreeFragment.newInstance(this, intent.getStringExtra("authorization"));
+            braintreeFragment.addListener(this);
+
             String type = intent.getStringExtra("type");
             if (type.equals("tokenizeCreditCard")) {
                 tokenizeCreditCard();
@@ -109,7 +116,6 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
                                     .setCurrencyCode((String) intent.getStringExtra("currencyCode"))
                                     .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
                                     .build())
-                            .billingAddressRequired(intent.getBooleanExtra("billingAddressRequired", true))
                             .googleMerchantId((String) intent.getStringExtra("googleMerchantID"))
 
             );
@@ -122,9 +128,29 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
         nonceMap.put("typeLabel", paymentMethodNonce.getTypeLabel());
         nonceMap.put("description", paymentMethodNonce.getDescription());
         nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+
         if (paymentMethodNonce instanceof PayPalAccountNonce) {
             PayPalAccountNonce paypalAccountNonce = (PayPalAccountNonce) paymentMethodNonce;
             nonceMap.put("paypalPayerId", paypalAccountNonce.getPayerId());
+        } else if (paymentMethodNonce instanceof GooglePaymentCardNonce) {
+            Log.d("PaymentMEthod", "paymentMethodNonce ! google pay");
+            ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest()
+                    .amount((String) getIntent().getStringExtra("totalPrice"))
+                    .nonce(paymentMethodNonce.getNonce())
+                    .versionRequested(ThreeDSecureRequest.VERSION_2);
+            ThreeDSecure.performVerification(braintreeFragment, threeDSecureRequest, new ThreeDSecureLookupListener() {
+                @Override
+                public void onLookupComplete(ThreeDSecureRequest threeDSecureRequest, ThreeDSecureLookup threeDSecureLookup) {
+                    Log.d("3DS", "onLookupComplete");
+                    ThreeDSecure.continuePerformVerification(braintreeFragment, threeDSecureRequest, threeDSecureLookup);
+                }
+            });
+        } else if (paymentMethodNonce instanceof CardNonce) {
+            Intent result = new Intent();
+            result.putExtra("type", "paymentMethodNonce");
+            result.putExtra("paymentMethodNonce", nonceMap);
+            setResult(RESULT_OK, result);
+            finish();
         }
 
         Intent result = new Intent();
