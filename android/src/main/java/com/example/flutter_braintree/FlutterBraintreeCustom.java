@@ -35,6 +35,7 @@ import io.flutter.plugin.common.MethodCall;
 
 public class FlutterBraintreeCustom extends AppCompatActivity implements PaymentMethodNonceCreatedListener, BraintreeCancelListener, BraintreeErrorListener {
     private BraintreeFragment braintreeFragment;
+    private String mTotalPrice;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,10 +80,16 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
     protected void requestPaypalNonce() {
         Intent intent = getIntent();
         String paypalIntent;
-        switch (intent.getStringExtra("payPalPaymentIntent")){
-            case PayPalRequest.INTENT_ORDER: paypalIntent = PayPalRequest.INTENT_ORDER; break;
-            case PayPalRequest.INTENT_SALE: paypalIntent = PayPalRequest.INTENT_SALE; break;
-            default: paypalIntent = PayPalRequest.INTENT_AUTHORIZE; break;
+        switch (intent.getStringExtra("payPalPaymentIntent")) {
+            case PayPalRequest.INTENT_ORDER:
+                paypalIntent = PayPalRequest.INTENT_ORDER;
+                break;
+            case PayPalRequest.INTENT_SALE:
+                paypalIntent = PayPalRequest.INTENT_SALE;
+                break;
+            default:
+                paypalIntent = PayPalRequest.INTENT_AUTHORIZE;
+                break;
         }
         String payPalPaymentUserAction = PayPalRequest.USER_ACTION_DEFAULT;
         if (PayPalRequest.USER_ACTION_COMMIT.equals(intent.getStringExtra("payPalPaymentUserAction"))) {
@@ -94,7 +101,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
                 .billingAgreementDescription(intent.getStringExtra("billingAgreementDescription"))
                 .intent(paypalIntent)
                 .userAction(payPalPaymentUserAction);
-        
+
 
         if (intent.getStringExtra("amount") == null) {
             // Vault flow
@@ -106,19 +113,23 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
     }
 
     protected void requestGooglePayNonce() {
-            Intent intent = getIntent();
+        Intent intent = getIntent();
+        mTotalPrice = intent.getStringExtra("totalPrice");
+        String currencyCode = intent.getStringExtra("currencyCode");
+        String environment = intent.getStringExtra("environment");
 
-            GooglePayment.requestPayment(
-                    braintreeFragment,
-                    new GooglePaymentRequest()
-                            .transactionInfo(TransactionInfo.newBuilder()
-                                    .setTotalPrice((String) intent.getStringExtra("totalPrice"))
-                                    .setCurrencyCode((String) intent.getStringExtra("currencyCode"))
-                                    .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
-                                    .build())
-                            .googleMerchantId((String) intent.getStringExtra("googleMerchantID"))
+        GooglePayment.requestPayment(
+                braintreeFragment,
+                new GooglePaymentRequest()
+                        .transactionInfo(TransactionInfo.newBuilder()
+                                .setTotalPrice(mTotalPrice)
+                                .setCurrencyCode(currencyCode)
+                                .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
+                                .build())
+                        .googleMerchantId((String) intent.getStringExtra("googleMerchantID"))
+                        .environment(environment)
 
-            );
+        );
     }
 
     @Override
@@ -133,31 +144,24 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
             PayPalAccountNonce paypalAccountNonce = (PayPalAccountNonce) paymentMethodNonce;
             nonceMap.put("paypalPayerId", paypalAccountNonce.getPayerId());
         } else if (paymentMethodNonce instanceof GooglePaymentCardNonce) {
-            Log.d("PaymentMEthod", "paymentMethodNonce ! google pay");
             ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest()
-                    .amount((String) getIntent().getStringExtra("totalPrice"))
+                    .amount(mTotalPrice)
                     .nonce(paymentMethodNonce.getNonce())
                     .versionRequested(ThreeDSecureRequest.VERSION_2);
+
             ThreeDSecure.performVerification(braintreeFragment, threeDSecureRequest, new ThreeDSecureLookupListener() {
                 @Override
                 public void onLookupComplete(ThreeDSecureRequest threeDSecureRequest, ThreeDSecureLookup threeDSecureLookup) {
-                    Log.d("3DS", "onLookupComplete");
                     ThreeDSecure.continuePerformVerification(braintreeFragment, threeDSecureRequest, threeDSecureLookup);
                 }
             });
-        } else if (paymentMethodNonce instanceof CardNonce) {
+        } else {
             Intent result = new Intent();
             result.putExtra("type", "paymentMethodNonce");
             result.putExtra("paymentMethodNonce", nonceMap);
             setResult(RESULT_OK, result);
             finish();
         }
-
-        Intent result = new Intent();
-        result.putExtra("type", "paymentMethodNonce");
-        result.putExtra("paymentMethodNonce", nonceMap);
-        setResult(RESULT_OK, result);
-        finish();
     }
 
     @Override
