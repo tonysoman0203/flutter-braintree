@@ -117,19 +117,19 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
         mTotalPrice = intent.getStringExtra("totalPrice");
         String currencyCode = intent.getStringExtra("currencyCode");
         String environment = intent.getStringExtra("environment");
-
-        GooglePayment.requestPayment(
-                braintreeFragment,
-                new GooglePaymentRequest()
-                        .transactionInfo(TransactionInfo.newBuilder()
-                                .setTotalPrice(mTotalPrice)
-                                .setCurrencyCode(currencyCode)
-                                .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
-                                .build())
-                        .googleMerchantId((String) intent.getStringExtra("googleMerchantID"))
-                        .environment(environment)
-
-        );
+        GooglePaymentRequest googlePaymentRequest = new GooglePaymentRequest();
+        googlePaymentRequest
+                .billingAddressRequired(intent.getBooleanExtra("billingAddressRequired", false))
+                .transactionInfo(TransactionInfo.newBuilder()
+                        .setTotalPrice(mTotalPrice)
+                        .setCurrencyCode(currencyCode)
+                        .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
+                        .build())
+                .environment(environment);
+        if (intent.getStringExtra("googleMerchantID") != null) {
+            googlePaymentRequest.googleMerchantId(intent.getStringExtra("googleMerchantID"));
+        }
+        GooglePayment.requestPayment(braintreeFragment, googlePaymentRequest);
     }
 
     @Override
