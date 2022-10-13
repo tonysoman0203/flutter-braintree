@@ -4,6 +4,7 @@ class BraintreeDropInRequest {
     this.tokenizationKey,
     this.amount,
     this.collectDeviceData = false,
+    this.kountMerchantId,
     this.requestThreeDSecureVerification = false,
     this.googlePaymentRequest,
     this.paypalRequest,
@@ -29,6 +30,9 @@ class BraintreeDropInRequest {
 
   /// Whether the Drop-in should collect and return device data for fraud prevention.
   bool collectDeviceData;
+
+  /// Custom fraud merchant id for collecting device data.
+  String? kountMerchantId;
 
   /// If 3D Secure has been enabled in the control panel and an amount is specified in
   /// [amount], Drop-In will request a 3D Secure verification for any new cards added by the user.
@@ -65,23 +69,22 @@ class BraintreeDropInRequest {
 
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-        if (clientToken != null) 'clientToken': clientToken,
-        if (tokenizationKey != null) 'tokenizationKey': tokenizationKey,
-        if (amount != null) 'amount': amount,
-        'collectDeviceData': collectDeviceData,
-        'requestThreeDSecureVerification': requestThreeDSecureVerification,
-        if (googlePaymentRequest != null)
-          'googlePaymentRequest': googlePaymentRequest!.toJson(),
-        if (paypalRequest != null) 'paypalRequest': paypalRequest!.toJson(),
-        if (applePayRequest != null)
-          'applePayRequest': applePayRequest!.toJson(),
-        'venmoEnabled': venmoEnabled,
-        'cardEnabled': cardEnabled,
-        'paypalEnabled': cardEnabled,
-        'maskCardNumber': maskCardNumber,
-        'maskSecurityCode': maskSecurityCode,
-        'vaultManagerEnabled': vaultManagerEnabled,
-      };
+    if (clientToken != null) 'clientToken': clientToken,
+    if (tokenizationKey != null) 'tokenizationKey': tokenizationKey,
+    if (amount != null) 'amount': amount,
+    'collectDeviceData': collectDeviceData,
+    'kountMerchantId': kountMerchantId,
+    'requestThreeDSecureVerification': requestThreeDSecureVerification,
+    if (googlePaymentRequest != null) 'googlePaymentRequest': googlePaymentRequest!.toJson(),
+    if (paypalRequest != null) 'paypalRequest': paypalRequest!.toJson(),
+    if (applePayRequest != null) 'applePayRequest': applePayRequest!.toJson(),
+    'venmoEnabled': venmoEnabled,
+    'cardEnabled': cardEnabled,
+    'paypalEnabled': cardEnabled,
+    'maskCardNumber': maskCardNumber,
+    'maskSecurityCode': maskSecurityCode,
+    'vaultManagerEnabled': vaultManagerEnabled,
+  };
 }
 
 class BraintreeCreditCardRequest {
@@ -109,12 +112,12 @@ class BraintreeCreditCardRequest {
   String? cardholderName;
 
   Map<String, dynamic> toJson() => {
-        'cardNumber': cardNumber,
-        'expirationMonth': expirationMonth,
-        'expirationYear': expirationYear,
-        'cvv': cvv,
-        'cardholderName': cardholderName
-      };
+    'cardNumber': cardNumber,
+    'expirationMonth': expirationMonth,
+    'expirationYear': expirationYear,
+    'cvv': cvv,
+    'cardholderName': cardholderName
+  };
 }
 
 class BraintreeGooglePaymentRequest {
@@ -123,6 +126,7 @@ class BraintreeGooglePaymentRequest {
     required this.currencyCode,
     this.billingAddressRequired = true,
     this.googleMerchantID,
+    this.environment
   });
 
   /// Total price of the payment.
@@ -137,13 +141,17 @@ class BraintreeGooglePaymentRequest {
   /// Google Merchant ID. Optional in sandbox, but if set, must be a valid production Google Merchant ID.
   String? googleMerchantID;
 
+  /// Environment - TEST / PRODUCTION
+  String? environment;
+
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-        'totalPrice': totalPrice,
-        'currencyCode': currencyCode,
-        'billingAddressRequired': billingAddressRequired,
-        if (googleMerchantID != null) 'googleMerchantID': googleMerchantID,
-      };
+    'totalPrice': totalPrice,
+    'currencyCode': currencyCode,
+    'billingAddressRequired': billingAddressRequired,
+    if (googleMerchantID != null) 'googleMerchantID': googleMerchantID,
+    'environment' : environment ?? "TEST"
+  };
 }
 
 class BraintreePayPalRequest {
@@ -178,14 +186,14 @@ class BraintreePayPalRequest {
 
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-        if (amount != null) 'amount': amount,
-        if (currencyCode != null) 'currencyCode': currencyCode,
-        if (displayName != null) 'displayName': displayName,
-        if (billingAgreementDescription != null)
-          'billingAgreementDescription': billingAgreementDescription,
-        'payPalPaymentIntent': payPalPaymentIntent.name,
-        'payPalPaymentUserAction': payPalPaymentUserAction.name,
-      };
+    if (amount != null) 'amount': amount,
+    if (currencyCode != null) 'currencyCode': currencyCode,
+    if (displayName != null) 'displayName': displayName,
+    if (billingAgreementDescription != null)
+      'billingAgreementDescription': billingAgreementDescription,
+    'payPalPaymentIntent': payPalPaymentIntent.name,
+    'payPalPaymentUserAction': payPalPaymentUserAction.name,
+  };
 }
 
 enum PayPalPaymentUserAction {
@@ -231,6 +239,28 @@ extension ApplePaySummaryItemTypeExtension on ApplePaySummaryItemType {
   }
 }
 
+enum ApplePaySupportedNetworks {
+  visa, // ios >= 8.0
+  masterCard, // ios >= 8.0
+  amex, // ios >= 8.0
+  discover, // ios >= 9.0
+}
+
+extension ApplePaySupportedNetworksExtension on ApplePaySupportedNetworks {
+  int get rawValue {
+    switch (this) {
+      case ApplePaySupportedNetworks.visa:
+        return 0;
+      case ApplePaySupportedNetworks.masterCard:
+        return 1;
+      case ApplePaySupportedNetworks.amex:
+        return 2;
+      case ApplePaySupportedNetworks.discover:
+        return 3;
+    }
+  }
+}
+
 class ApplePaySummaryItem {
   ApplePaySummaryItem({
     required this.label,
@@ -249,10 +279,10 @@ class ApplePaySummaryItem {
 
   /// Converts this summary item object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-        'label': label,
-        'amount': amount,
-        'type': type.rawValue,
-      };
+    'label': label,
+    'amount': amount,
+    'type': type.rawValue,
+  };
 }
 
 class BraintreeApplePayRequest {
@@ -262,6 +292,7 @@ class BraintreeApplePayRequest {
     required this.currencyCode,
     required this.countryCode,
     required this.merchantIdentifier,
+    required this.supportedNetworks,
   });
 
   /// A summary of the payment.
@@ -279,13 +310,16 @@ class BraintreeApplePayRequest {
   /// Apple merchant identifier.
   final String merchantIdentifier;
 
+  /// Supported Networks
+  final List<ApplePaySupportedNetworks> supportedNetworks;
+
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-        'paymentSummaryItems':
-            paymentSummaryItems.map((item) => item.toJson()).toList(),
-        'currencyCode': currencyCode,
-        'displayName': displayName,
-        'countryCode': countryCode,
-        'merchantIdentifier': merchantIdentifier,
-      };
+    'paymentSummaryItems': paymentSummaryItems.map((item) => item.toJson()).toList(),
+    'currencyCode': currencyCode,
+    'displayName': displayName,
+    'countryCode': countryCode,
+    'merchantIdentifier': merchantIdentifier,
+    'supportedNetworks': supportedNetworks.map((e) => e.rawValue).toList(),
+  };
 }

@@ -13,6 +13,7 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 import com.braintreepayments.api.dropin.DropInActivity;
 import com.braintreepayments.api.dropin.DropInRequest;
@@ -21,7 +22,9 @@ import com.braintreepayments.api.models.GooglePaymentRequest;
 import com.braintreepayments.api.models.PayPalRequest;
 import com.braintreepayments.api.models.PaymentMethodNonce;
 
+import com.braintreepayments.api.models.ThreeDSecureRequest;
 import com.google.android.gms.wallet.TransactionInfo;
+import com.google.android.gms.wallet.Wallet;
 import com.google.android.gms.wallet.WalletConstants;
 
 import java.util.HashMap;
@@ -79,12 +82,14 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
       String clientToken = call.argument("clientToken");
       String tokenizationKey = call.argument("tokenizationKey");
       DropInRequest dropInRequest = new DropInRequest()
-              .amount((String) call.argument("amount"))
               .collectDeviceData((Boolean) call.argument("collectDeviceData"))
               .requestThreeDSecureVerification((Boolean) call.argument("requestThreeDSecureVerification"))
               .maskCardNumber((Boolean) call.argument("maskCardNumber"))
-              .vaultManager((Boolean) call.argument("vaultManagerEnabled"));
-
+              .vaultManager((Boolean) call.argument("vaultManagerEnabled"))
+              .threeDSecureRequest(new ThreeDSecureRequest()
+                      .amount((String) call.argument("amount"))
+                      .versionRequested(ThreeDSecureRequest.VERSION_2)
+              );
 
       if (clientToken != null)
         dropInRequest.clientToken(clientToken);
@@ -117,12 +122,14 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
       dropInRequest.disableGooglePayment();
       return;
     }
+    Log.d("Flutter", (String) arg.get("environment"));
     GooglePaymentRequest googlePaymentRequest = new GooglePaymentRequest()
             .transactionInfo(TransactionInfo.newBuilder()
                     .setTotalPrice((String) arg.get("totalPrice"))
                     .setCurrencyCode((String) arg.get("currencyCode"))
                     .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
                     .build())
+            .environment((String) arg.get("environment"))
             .billingAddressRequired((Boolean) arg.get("billingAddressRequired"))
             .googleMerchantId((String) arg.get("merchantID"));
     dropInRequest.googlePaymentRequest(googlePaymentRequest);

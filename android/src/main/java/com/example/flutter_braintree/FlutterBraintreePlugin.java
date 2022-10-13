@@ -1,13 +1,7 @@
 package com.example.flutter_braintree;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-
-import com.braintreepayments.api.dropin.DropInActivity;
-import com.braintreepayments.api.dropin.DropInRequest;
-import com.braintreepayments.api.dropin.DropInResult;
-import com.braintreepayments.api.models.PaymentMethodNonce;
 
 import java.util.Map;
 
@@ -18,8 +12,8 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener;
+import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 public class FlutterBraintreePlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, ActivityResultListener {
   private static final int CUSTOM_ACTIVITY_REQUEST_CODE = 0x420;
@@ -114,11 +108,41 @@ public class FlutterBraintreePlugin implements FlutterPlugin, ActivityAware, Met
       intent.putExtra("payPalPaymentUserAction", (String) request.get("payPalPaymentUserAction"));
       intent.putExtra("billingAgreementDescription", (String) request.get("billingAgreementDescription"));
       activity.startActivityForResult(intent, CUSTOM_ACTIVITY_REQUEST_CODE);
+    } else if (call.method.equals("requestGooglePayNonce")) {
+      String authorization = call.argument("authorization");
+      Intent intent = new Intent(activity, FlutterBraintreeCustom.class);
+      intent.putExtra("type", "requestGooglePayNonce");
+      intent.putExtra("authorization", (String) call.argument("authorization"));
+      assert(call.argument("request") instanceof Map);
+      Map request = (Map) call.argument("request");
+      intent.putExtra("totalPrice", (String) request.get("totalPrice"));
+      intent.putExtra("currencyCode", (String) request.get("currencyCode"));
+      intent.putExtra("googleMerchantID", (String) request.get("googleMerchantID"));
+      intent.putExtra("billingAddressRequired", (Boolean) request.get("billingAddressRequired"));
+      intent.putExtra("environment", (String) request.get("environment"));
+      activity.startActivityForResult(intent, CUSTOM_ACTIVITY_REQUEST_CODE);
     } else {
       result.notImplemented();
       activeResult = null;
     }
   }
+
+//  private static void readGooglePaymentParameters(DropInRequest dropInRequest, MethodCall call) {
+//    HashMap<String, Object> arg = call.argument("googlePaymentRequest");
+//    if (arg == null) {
+//      dropInRequest.disableGooglePayment();
+//      return;
+//    }
+//    GooglePaymentRequest googlePaymentRequest = new GooglePaymentRequest()
+//            .transactionInfo(TransactionInfo.newBuilder()
+//                    .setTotalPrice((String) arg.get("totalPrice"))
+//                    .setCurrencyCode((String) arg.get("currencyCode"))
+//                    .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
+//                    .build())
+//            .billingAddressRequired((Boolean) arg.get("billingAddressRequired"))
+//            .googleMerchantId((String) arg.get("merchantID"));
+//    dropInRequest.googlePaymentRequest(googlePaymentRequest);
+//  }
 
   @Override
   public boolean onActivityResult(int requestCode, int resultCode, Intent data) {

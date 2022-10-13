@@ -57,6 +57,14 @@ public class FlutterBraintreeDropInPlugin: BaseFlutterBraintreePlugin, FlutterPl
                 return
             }
             
+            guard let authorization = getAuthorization(call: call) else {
+                returnAuthorizationMissingError(result: result)
+                isHandlingResult = false
+                return
+            }
+            
+            self.authorization = authorization
+            
             isHandlingResult = true
             
             let dropInRequest = BTDropInRequest()
@@ -71,6 +79,16 @@ public class FlutterBraintreeDropInPlugin: BaseFlutterBraintreePlugin, FlutterPl
             var deviceData: String?
             if let collectDeviceData = bool(for: "collectDeviceData", in: call), collectDeviceData {
                 deviceData = PPDataCollector.collectPayPalDeviceData()
+            
+                if let kountMerchantId = string(for: "kountMerchantId", in: call) {
+                    if let apiClient = BTAPIClient(authorization: authorization) {
+                    let dataCollector = BTDataCollector(apiClient: apiClient)
+                    dataCollector.setFraudMerchantID(kountMerchantId)
+                    dataCollector.collectDeviceData({ collectedData in
+                            deviceData = collectedData
+                        })
+                    }
+                }
             }
             
             if let vaultManagerEnabled = bool(for: "vaultManagerEnabled", in: call) {
@@ -108,14 +126,6 @@ public class FlutterBraintreeDropInPlugin: BaseFlutterBraintreePlugin, FlutterPl
                 dropInRequest.applePayDisabled = true
             }
             
-            guard let authorization = getAuthorization(call: call) else {
-                returnAuthorizationMissingError(result: result)
-                isHandlingResult = false
-                return
-            }
-            
-            self.authorization = authorization
-            
             let dropInController = BTDropInController(authorization: authorization, request: dropInRequest) { (controller, braintreeResult, error) in
                 controller.dismiss(animated: true, completion: nil)
                 
@@ -135,7 +145,11 @@ public class FlutterBraintreeDropInPlugin: BaseFlutterBraintreePlugin, FlutterPl
     
     private func setupApplePay(flutterResult: FlutterResult) {
         let paymentRequest = PKPaymentRequest()
-        paymentRequest.supportedNetworks = [.visa, .masterCard, .amex, .discover]
+        if let supportedNetworksValueArray = applePayInfo["supportedNetworks"] as? [Int] {
+            paymentRequest.supportedNetworks = supportedNetworksValueArray.compactMap({ value in
+                return PKPaymentNetwork.mapRequestedNetwork(rawValue: value)
+            })
+        }
         paymentRequest.merchantCapabilities = .capability3DS
         paymentRequest.countryCode = applePayInfo["countryCode"] as! String
         paymentRequest.currencyCode = applePayInfo["currencyCode"] as! String
