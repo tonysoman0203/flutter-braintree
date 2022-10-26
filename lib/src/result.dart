@@ -26,6 +26,8 @@ class BraintreePaymentMethodNonce {
     required this.description,
     required this.isDefault,
     this.paypalPayerId,
+    this.liabilityShifted = false,
+    this.liabilityShiftPossible = false
   });
 
   factory BraintreePaymentMethodNonce.fromJson(dynamic source) {
@@ -54,4 +56,19 @@ class BraintreePaymentMethodNonce {
 
   /// PayPal payer id if requesting for paypal nonce
   final String? paypalPayerId;
+
+  /// liabilityShifted indicates that 3D Secure worked and authentication succeeded.
+  /// This will also be true if the issuing bank does not support 3D Secure,
+  /// but the payment method does. In both cases, the liability for fraud has been shifted to the bank.
+  /// You should go on creating a transaction using the new nonce
+  final bool? liabilityShifted;
+
+  /// liabilityShiftPossible indicates that the payment method was eligible for 3D Secure.
+  /// If liabilityShifted is false, then the user failed 3D Secure authentication.
+  /// In this situation, the card brands recommend asking the user for another form of payment.
+  /// However, if you have server-side risk assessment processes that allow for it,
+  /// you can still use the new nonce to create a transaction.
+  /// If you want to use a nonce that did not pass 3D Secure authentication,
+  /// you need to set the required option to false in your server integration
+  final bool? liabilityShiftPossible;
 }
