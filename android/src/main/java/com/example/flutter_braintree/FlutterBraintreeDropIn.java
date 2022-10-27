@@ -18,6 +18,7 @@ import android.util.Log;
 import com.braintreepayments.api.dropin.DropInActivity;
 import com.braintreepayments.api.dropin.DropInRequest;
 import com.braintreepayments.api.dropin.DropInResult;
+import com.braintreepayments.api.models.CardNonce;
 import com.braintreepayments.api.models.GooglePaymentRequest;
 import com.braintreepayments.api.models.PayPalRequest;
 import com.braintreepayments.api.models.PaymentMethodNonce;
@@ -155,6 +156,32 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
     dropInRequest.paypalRequest(paypalRequest);
   }
 
+  /**
+   * the function to verify the card is three-D secure or not
+   * @param braintreeNonce
+   */
+  private void checkLiabilityShifted(DropInResult dropInResult, PaymentMethodNonce braintreeNonce) {
+    CardNonce cardNonce = (CardNonce)braintreeNonce;
+
+    boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
+    boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
+    HashMap<String, Object> result = new HashMap<String, Object>();
+
+    HashMap<String, Object> nonceResult = new HashMap<String, Object>();
+    nonceResult.put("nonce", cardNonce.getNonce());
+    nonceResult.put("typeLabel", cardNonce.getTypeLabel());
+    nonceResult.put("description", cardNonce.getDescription());
+    nonceResult.put("isDefault", cardNonce.isDefault());
+    nonceResult.put("liabilityShifted", liabilityShifted);
+    nonceResult.put("liabilityShiftPossible", liabilityShiftPossible);
+
+    result.put("paymentMethodNonce", nonceResult);
+    result.put("deviceData", dropInResult.getDeviceData());
+
+
+    activeResult.success(result);
+  }
+
   @Override
   public boolean onActivityResult(int requestCode, int resultCode, Intent data)  {
     if (activeResult == null)
@@ -165,17 +192,7 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
         if (resultCode == Activity.RESULT_OK) {
           DropInResult dropInResult = data.getParcelableExtra(DropInResult.EXTRA_DROP_IN_RESULT);
           PaymentMethodNonce paymentMethodNonce = dropInResult.getPaymentMethodNonce();
-          HashMap<String, Object> result = new HashMap<String, Object>();
-
-          HashMap<String, Object> nonceResult = new HashMap<String, Object>();
-          nonceResult.put("nonce", paymentMethodNonce.getNonce());
-          nonceResult.put("typeLabel", paymentMethodNonce.getTypeLabel());
-          nonceResult.put("description", paymentMethodNonce.getDescription());
-          nonceResult.put("isDefault", paymentMethodNonce.isDefault());
-
-          result.put("paymentMethodNonce", nonceResult);
-          result.put("deviceData", dropInResult.getDeviceData());
-          activeResult.success(result);
+          checkLiabilityShifted(dropInResult, paymentMethodNonce);
         } else if (resultCode == Activity.RESULT_CANCELED) {
           activeResult.success(null);
         } else {

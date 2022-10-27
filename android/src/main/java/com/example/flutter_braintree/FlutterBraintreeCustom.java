@@ -11,6 +11,7 @@ import com.braintreepayments.api.Card;
 import com.braintreepayments.api.GooglePayment;
 import com.braintreepayments.api.PayPal;
 import com.braintreepayments.api.ThreeDSecure;
+import com.braintreepayments.api.dropin.DropInResult;
 import com.braintreepayments.api.interfaces.BraintreeCancelListener;
 import com.braintreepayments.api.interfaces.BraintreeErrorListener;
 import com.braintreepayments.api.interfaces.PaymentMethodNonceCreatedListener;
@@ -156,12 +157,32 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
                 }
             });
         } else {
-            Intent result = new Intent();
-            result.putExtra("type", "paymentMethodNonce");
-            result.putExtra("paymentMethodNonce", nonceMap);
-            setResult(RESULT_OK, result);
-            finish();
+            checkLiabilityShifted(paymentMethodNonce);
         }
+    }
+
+    /**
+     * the function to verify the card is three-D secure or not
+     * @param paymentMethodNonce
+     */
+    private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
+        CardNonce cardNonce = (CardNonce)paymentMethodNonce;
+
+        boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
+        boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
+        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+        nonceMap.put("nonce", paymentMethodNonce.getNonce());
+        nonceMap.put("typeLabel", paymentMethodNonce.getTypeLabel());
+        nonceMap.put("description", paymentMethodNonce.getDescription());
+        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+        nonceMap.put("liabilityShifted", liabilityShifted);
+        nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
+
+        Intent result = new Intent();
+        result.putExtra("type", "paymentMethodNonce");
+        result.putExtra("paymentMethodNonce", nonceMap);
+        setResult(RESULT_OK, result);
+        finish();
     }
 
     @Override
