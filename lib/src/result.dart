@@ -38,6 +38,8 @@ class BraintreePaymentMethodNonce {
       description: source['description'],
       isDefault: source['isDefault'],
       paypalPayerId: source['paypalPayerId'],
+      liabilityShifted: soruce['liabilityShifted'],
+      liabilityShiftPossible: source['liabilityShiftPossible']
     );
   }
 
