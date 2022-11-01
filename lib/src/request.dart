@@ -4,6 +4,7 @@ class BraintreeDropInRequest {
     this.tokenizationKey,
     this.amount,
     this.collectDeviceData = false,
+    this.kountMerchantId,
     this.requestThreeDSecureVerification = false,
     this.googlePaymentRequest,
     this.paypalRequest,
@@ -29,6 +30,9 @@ class BraintreeDropInRequest {
 
   /// Whether the Drop-in should collect and return device data for fraud prevention.
   bool collectDeviceData;
+
+  /// Custom fraud merchant id for collecting device data.
+  String? kountMerchantId;
 
   /// If 3D Secure has been enabled in the control panel and an amount is specified in
   /// [amount], Drop-In will request a 3D Secure verification for any new cards added by the user.
@@ -69,12 +73,11 @@ class BraintreeDropInRequest {
     if (tokenizationKey != null) 'tokenizationKey': tokenizationKey,
     if (amount != null) 'amount': amount,
     'collectDeviceData': collectDeviceData,
+    'kountMerchantId': kountMerchantId,
     'requestThreeDSecureVerification': requestThreeDSecureVerification,
-    if (googlePaymentRequest != null)
-      'googlePaymentRequest': googlePaymentRequest!.toJson(),
+    if (googlePaymentRequest != null) 'googlePaymentRequest': googlePaymentRequest!.toJson(),
     if (paypalRequest != null) 'paypalRequest': paypalRequest!.toJson(),
-    if (applePayRequest != null)
-      'applePayRequest': applePayRequest!.toJson(),
+    if (applePayRequest != null) 'applePayRequest': applePayRequest!.toJson(),
     'venmoEnabled': venmoEnabled,
     'cardEnabled': cardEnabled,
     'paypalEnabled': cardEnabled,
@@ -123,6 +126,7 @@ class BraintreeGooglePaymentRequest {
     required this.currencyCode,
     this.billingAddressRequired = true,
     this.googleMerchantID,
+    this.environment
   });
 
   /// Total price of the payment.
@@ -137,12 +141,16 @@ class BraintreeGooglePaymentRequest {
   /// Google Merchant ID. Optional in sandbox, but if set, must be a valid production Google Merchant ID.
   String? googleMerchantID;
 
+  /// Environment - TEST / PRODUCTION
+  String? environment;
+
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
     'totalPrice': totalPrice,
     'currencyCode': currencyCode,
     'billingAddressRequired': billingAddressRequired,
     if (googleMerchantID != null) 'googleMerchantID': googleMerchantID,
+    'environment' : environment ?? "TEST"
   };
 }
 
