@@ -43,7 +43,6 @@ android {
 
 dependencies {
     implementation 'com.braintreepayments.api:drop-in:6.4.0'
-    implementation "com.braintreepayments.api:braintree:4.19.0"
     // to perform 3DS verification
     implementation 'com.braintreepayments.api:three-d-secure:4.19.0'
     implementation 'com.braintreepayments.api:paypal:4.19.0'
