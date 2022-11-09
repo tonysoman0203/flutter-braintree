@@ -125,7 +125,6 @@ class BraintreeGooglePaymentRequest {
     required this.totalPrice,
     required this.currencyCode,
     this.billingAddressRequired = true,
-    this.googleMerchantID,
     this.environment
   });
 
@@ -149,7 +148,6 @@ class BraintreeGooglePaymentRequest {
     'totalPrice': totalPrice,
     'currencyCode': currencyCode,
     'billingAddressRequired': billingAddressRequired,
-    if (googleMerchantID != null) 'googleMerchantID': googleMerchantID,
     'environment' : environment ?? "TEST"
   };
 }
