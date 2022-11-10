@@ -90,6 +90,9 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
         dropInClient = new DropInClient((FragmentActivity) activity, clientToken);
       else if (tokenizationKey != null)
         dropInClient = new DropInClient((FragmentActivity) activity, tokenizationKey);
+      else
+        result.error("drop_in_init_failed", "clientToken / tokenizationKey is empty", null);
+
       dropInClient.setListener(this);
 
       DropInRequest dropInRequest = new DropInRequest();
