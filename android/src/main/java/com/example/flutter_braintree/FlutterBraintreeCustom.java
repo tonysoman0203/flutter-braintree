@@ -142,7 +142,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
         googlePayClient.requestPayment(this, googlePayRequest);
     }
 
-    private void performThreeDSecureValidation(CardNonce cardNonce) {
+    private void performThreeDSecureValidation(PaymentMethodNonce cardNonce) {
         final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
         threeDSecureRequest.setAmount(mTotalPrice);
         threeDSecureRequest.setNonce(cardNonce.getString());
@@ -240,7 +240,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
     @Override
     public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
         // send nonce to server
-        performThreeDSecureValidation((CardNonce) paymentMethodNonce);
+        performThreeDSecureValidation(paymentMethodNonce);
     }
 
     @Override

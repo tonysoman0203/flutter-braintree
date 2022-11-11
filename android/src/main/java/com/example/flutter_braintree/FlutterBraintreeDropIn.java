@@ -1,5 +1,15 @@
 package com.example.flutter_braintree;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+
+import com.braintreepayments.api.DropInClient;
+
+import java.util.HashMap;
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
@@ -10,31 +20,9 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
-import android.app.Activity;
-import android.content.Intent;
-
-import androidx.annotation.NonNull;
-import androidx.fragment.app.FragmentActivity;
-
-import com.braintreepayments.api.CardNonce;
-import com.braintreepayments.api.DropInActivity;
-import com.braintreepayments.api.DropInClient;
-import com.braintreepayments.api.DropInListener;
-import com.braintreepayments.api.DropInRequest;
-import com.braintreepayments.api.DropInResult;
-import com.braintreepayments.api.GooglePayRequest;
-import com.braintreepayments.api.PayPalCheckoutRequest;
-import com.braintreepayments.api.PaymentMethodNonce;
-import com.braintreepayments.api.ThreeDSecureRequest;
-import com.braintreepayments.api.UserCanceledException;
-
-import com.google.android.gms.wallet.TransactionInfo;
-import com.google.android.gms.wallet.WalletConstants;
-
-import java.util.HashMap;
-
-public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, MethodCallHandler, DropInListener {
+public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, MethodCallHandler, ActivityResultListener {
   private static final int DROP_IN_REQUEST_CODE = 0x1337;
+  public static final int DROP_IN_ERROR_CODE = 0x1335;
 
   private Activity activity;
   private Result activeResult;
@@ -63,6 +51,7 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
   @Override
   public void onAttachedToActivity(ActivityPluginBinding binding) {
     activity = binding.getActivity();
+    binding.addActivityResultListener(this);
   }
 
   @Override
@@ -85,118 +74,99 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
     if (call.method.equals("start")) {
       String clientToken = call.argument("clientToken");
       String tokenizationKey = call.argument("tokenizationKey");
-      // DropInClient can also be instantiated with a tokenization key
+
+      Intent intent = new Intent(activity, FlutterBraintreeDropInActivity.class);
       if (clientToken != null)
-        dropInClient = new DropInClient((FragmentActivity) activity, clientToken);
-      else if (tokenizationKey != null)
-        dropInClient = new DropInClient((FragmentActivity) activity, tokenizationKey);
-      dropInClient.setListener(this);
+        intent.putExtra("clientToken",clientToken);
+      if (tokenizationKey != null)
+        intent.putExtra("tokenizationKey", tokenizationKey);
+      if ((Boolean) call.argument("maskCardNumber") != null)
+        intent.putExtra("maskCardNumber", (Boolean) call.argument("maskCardNumber"));
+      if ((Boolean) call.argument("vaultManagerEnabled") != null)
+        intent.putExtra("vaultManagerEnabled", (Boolean) call.argument("vaultManagerEnabled"));
+      if ((String) call.argument("amount") != null)
+        intent.putExtra("amount", (String) call.argument("amount"));
+      if ((Boolean) call.argument("venmoEnabled") != null)
+        intent.putExtra("venmoEnabled", (Boolean) call.argument("venmoEnabled"));
+      if ((Boolean) call.argument("cardEnabled") != null)
+        intent.putExtra("cardEnabled", (Boolean) call.argument("cardEnabled"));
+      if ((Boolean) call.argument("paypalEnabled") != null)
+        intent.putExtra("paypalEnabled", (Boolean) call.argument("paypalEnabled"));
 
-      DropInRequest dropInRequest = new DropInRequest();
-      dropInRequest.setMaskCardNumber((Boolean) call.argument("maskCardNumber"));
-      dropInRequest.setVaultManagerEnabled((Boolean) call.argument("vaultManagerEnabled"));
-      ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
-      threeDSecureRequest.setAmount((String) call.argument("amount"));
-      dropInRequest.setThreeDSecureRequest(threeDSecureRequest);
+      if (call.argument("googlePaymentRequest") != null) {
+        HashMap<String, Object> arg = call.argument("googlePaymentRequest");
+        String currencyCode = (String) arg.get("currencyCode");
+        String environment = (String) arg.get("environment");
+        String totalPrice = (String) arg.get("totalPrice");
+        boolean billingAddressRequired = (Boolean) arg.get("billingAddressRequired");
+        intent.putExtra("googlePaymentRequest", true);
+        intent.putExtra("currencyCode", currencyCode);
+        intent.putExtra("environment",environment);
+        intent.putExtra("totalPrice", totalPrice);
+        intent.putExtra("billingAddressRequired", billingAddressRequired);
+      } else {
+        intent.putExtra("googlePaymentRequest", false);
+      }
 
-      readGooglePaymentParameters(dropInRequest, call);
-      readPayPalParameters(dropInRequest, call);
-
-      if (!((Boolean) call.argument("venmoEnabled")))
-        dropInRequest.setVenmoDisabled(true);
-      if (!((Boolean) call.argument("cardEnabled")))
-        dropInRequest.setCardDisabled(true);
-      if (!((Boolean) call.argument("paypalEnabled")))
-        dropInRequest.setPayPalDisabled(true);
+      if (call.argument("paypalRequest") != null) {
+        HashMap<String, Object> arg = call.argument("paypalRequest");
+        String amount = (String) arg.get("amount");
+        String billingAgreementDescription = (String) arg.get("billingAgreementDescription");
+        String displayName = (String) arg.get("displayName");
+        intent.putExtra("amount", amount);
+        intent.putExtra("displayName", displayName);
+        intent.putExtra("billingAgreementDescription", billingAgreementDescription);
+        intent.putExtra("paypalRequest", true);
+      } else {
+        intent.putExtra("paypalRequest", false);
+      }
 
       if (activeResult != null) {
         result.error("drop_in_already_running", "Cannot launch another Drop-in activity while one is already running.", null);
         return;
       }
       this.activeResult = result;
-      dropInClient.launchDropIn(dropInRequest);
+
+      activity.startActivityForResult(intent,DROP_IN_REQUEST_CODE);
+
     } else {
       result.notImplemented();
     }
   }
 
-  private static void readGooglePaymentParameters(DropInRequest dropInRequest, MethodCall call) {
-    HashMap<String, Object> arg = call.argument("googlePaymentRequest");
-    if (arg == null) {
-      dropInRequest.setGooglePayDisabled(true);
-      return;
-    }
-    String currencyCode = (String) arg.get("currencyCode");
-    String environment = (String) arg.get("environment");
-    String totalPrice = (String) arg.get("totalPrice");
-
-    GooglePayRequest googlePayRequest = new GooglePayRequest();
-    googlePayRequest.setBillingAddressRequired((Boolean) arg.get("billingAddressRequired"));
-    googlePayRequest.setTransactionInfo(TransactionInfo.newBuilder()
-                    .setTotalPrice(totalPrice)
-                    .setCurrencyCode(currencyCode)
-                    .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
-                    .build());
-    googlePayRequest.setEnvironment(environment);
-    if (arg.get("googleMerchantID") != null) {
-      googlePayRequest.setGoogleMerchantId((String) arg.get("googleMerchantID"));
-    }
-    dropInRequest.setGooglePayRequest(googlePayRequest);
-  }
-
-  private static void readPayPalParameters(DropInRequest dropInRequest, MethodCall call) {
-    HashMap<String, Object> arg = call.argument("paypalRequest");
-    if (arg == null) {
-      dropInRequest.setPayPalDisabled(true);
-      return;
-    }
-    String amount = (String) arg.get("amount");
-    if (amount != null) {
-      PayPalCheckoutRequest paypalRequest = new PayPalCheckoutRequest(amount);
-      paypalRequest.setDisplayName((String) arg.get("displayName"));
-      paypalRequest.setBillingAgreementDescription((String) arg.get("billingAgreementDescription"));
-      dropInRequest.setPayPalRequest(paypalRequest);
-    }
-  }
-
-  /**
-   * the function to verify the card is three-D secure or not
-   * @param braintreeNonce
-   */
-  private void checkLiabilityShifted(DropInResult dropInResult, PaymentMethodNonce braintreeNonce) {
-    CardNonce cardNonce = (CardNonce)braintreeNonce;
-
-    boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
-    boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
-    HashMap<String, Object> result = new HashMap<String, Object>();
-
-    HashMap<String, Object> nonceResult = new HashMap<String, Object>();
-    nonceResult.put("nonce", cardNonce.getString());
-    nonceResult.put("isDefault", cardNonce.isDefault());
-    nonceResult.put("liabilityShifted", liabilityShifted);
-    nonceResult.put("liabilityShiftPossible", liabilityShiftPossible);
-
-    result.put("paymentMethodNonce", nonceResult);
-    result.put("deviceData", dropInResult.getDeviceData());
-
-
-    activeResult.success(result);
-  }
 
   @Override
-  public void onDropInSuccess(@NonNull DropInResult dropInResult) {
-    PaymentMethodNonce paymentMethodNonce = dropInResult.getPaymentMethodNonce();
-    checkLiabilityShifted(dropInResult, paymentMethodNonce);
-  }
+  public boolean onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    if (activeResult == null)
+      return false;
+    if (requestCode == DROP_IN_REQUEST_CODE) {
+      if (resultCode == Activity.RESULT_OK) {
+        String nonce = data.getStringExtra("nonce");
+        boolean isDefault = data.getBooleanExtra("isDefault", false);
+        boolean liabilityShifted = data.getBooleanExtra("liabilityShifted", false);
+        boolean liabilityShiftPossible = data.getBooleanExtra("liabilityShiftPossible", false);
+        String deviceData = data.getStringExtra("deviceData");
 
-  @Override
-  public void onDropInFailure(@NonNull Exception error) {
-    if (error instanceof UserCanceledException) {
-      // the user canceled
-      activeResult.success(null);
-    } else {
-      // handle error
-      activeResult.error("braintree_error", error.getMessage(), null);
+        HashMap<String, Object> result = new HashMap<String, Object>();
+        HashMap<String, Object> nonceResult = new HashMap<String, Object>();
+        nonceResult.put("nonce", nonce);
+        nonceResult.put("isDefault", isDefault);
+        nonceResult.put("liabilityShifted", liabilityShifted);
+        nonceResult.put("liabilityShiftPossible", liabilityShiftPossible);
+        result.put("paymentMethodNonce", nonceResult);
+        result.put("deviceData", deviceData);
+
+        activeResult.success(result);
+
+      } else if (resultCode == Activity.RESULT_CANCELED) {
+        activeResult.success(null);
+      } else {
+        Log.d("DropIn", data.getStringExtra("error"));
+        activeResult.error("braintree_error", data.getStringExtra("error"), null);
+      }
+      activeResult = null;
+      return true;
     }
+    return false;
   }
 }
