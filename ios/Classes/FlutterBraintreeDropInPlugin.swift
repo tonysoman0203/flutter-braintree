@@ -178,7 +178,10 @@ public class FlutterBraintreeDropInPlugin: BaseFlutterBraintreePlugin, FlutterPl
             if let result = result, result.paymentMethodType == .applePay {
                 setupApplePay(flutterResult: flutterResult)
             } else {
-                flutterResult(["paymentMethodNonce": buildPaymentNonceDict(nonce: result?.paymentMethod), "deviceData": deviceData])
+                flutterResult([
+                    "paymentMethodNonce": buildPaymentNonceDict(nonce: result?.paymentMethod),
+                    "deviceData": deviceData,
+                ])
             }
         }
     }
