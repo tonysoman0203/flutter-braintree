@@ -36,6 +36,8 @@ open class BaseFlutterBraintreePlugin: NSObject {
             dict["paypalPayerId"] = paypalNonce.payerID
             dict["description"] = paypalNonce.email
         }
+        dict["liabilityShifted"] = nonce.threeDSecureInfo.liabilityShifted
+        dict["liabilityShiftPossible"] = nonce.threeDSecureInfo.liabilityShiftPossible
         return dict
     }
     

@@ -1,41 +1,45 @@
 package com.example.flutter_braintree;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 
-import com.braintreepayments.api.BraintreeFragment;
+import com.braintreepayments.api.BraintreeClient;
 import com.braintreepayments.api.Card;
-import com.braintreepayments.api.GooglePayment;
-import com.braintreepayments.api.PayPal;
-import com.braintreepayments.api.ThreeDSecure;
-import com.braintreepayments.api.dropin.DropInResult;
-import com.braintreepayments.api.interfaces.BraintreeCancelListener;
-import com.braintreepayments.api.interfaces.BraintreeErrorListener;
-import com.braintreepayments.api.interfaces.PaymentMethodNonceCreatedListener;
-import com.braintreepayments.api.interfaces.ThreeDSecureLookupListener;
-import com.braintreepayments.api.models.CardBuilder;
-import com.braintreepayments.api.models.CardNonce;
-import com.braintreepayments.api.models.GooglePaymentCardNonce;
-import com.braintreepayments.api.models.GooglePaymentRequest;
-import com.braintreepayments.api.models.PayPalRequest;
-import com.braintreepayments.api.models.PaymentMethodNonce;
-import com.braintreepayments.api.models.PayPalAccountNonce;
-import com.braintreepayments.api.models.ThreeDSecureLookup;
-import com.braintreepayments.api.models.ThreeDSecureRequest;
+import com.braintreepayments.api.CardClient;
+import com.braintreepayments.api.CardNonce;
+import com.braintreepayments.api.CardTokenizeCallback;
+import com.braintreepayments.api.GooglePayClient;
+import com.braintreepayments.api.GooglePayListener;
+import com.braintreepayments.api.GooglePayRequest;
+import com.braintreepayments.api.PayPalAccountNonce;
+import com.braintreepayments.api.PayPalCheckoutRequest;
+import com.braintreepayments.api.PayPalClient;
+import com.braintreepayments.api.PayPalListener;
+import com.braintreepayments.api.PayPalPaymentIntent;
+import com.braintreepayments.api.PayPalVaultRequest;
+import com.braintreepayments.api.PaymentMethodNonce;
+import com.braintreepayments.api.ThreeDSecureClient;
+import com.braintreepayments.api.ThreeDSecureListener;
+import com.braintreepayments.api.ThreeDSecureRequest;
+import com.braintreepayments.api.ThreeDSecureResult;
+import com.braintreepayments.api.ThreeDSecureResultCallback;
+import com.braintreepayments.api.UserCanceledException;
 import com.google.android.gms.wallet.TransactionInfo;
 import com.google.android.gms.wallet.WalletConstants;
 
-import org.json.JSONArray;
 
 import java.util.HashMap;
 
-import io.flutter.plugin.common.MethodCall;
 
-public class FlutterBraintreeCustom extends AppCompatActivity implements PaymentMethodNonceCreatedListener, BraintreeCancelListener, BraintreeErrorListener {
-    private BraintreeFragment braintreeFragment;
+public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalListener, ThreeDSecureListener, GooglePayListener {
+    private BraintreeClient mBraintreeClient;
+    private ThreeDSecureClient threeDSecureClient;
+    private GooglePayClient googlePayClient;
+    private PayPalClient payPalClient;
     private String mTotalPrice;
 
     @Override
@@ -44,9 +48,9 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
         setContentView(R.layout.activity_flutter_braintree_custom);
         try {
             Intent intent = getIntent();
-            braintreeFragment = BraintreeFragment.newInstance(this, intent.getStringExtra("authorization"));
-            braintreeFragment.addListener(this);
-
+            mBraintreeClient = new BraintreeClient(this, intent.getStringExtra("authorization"));
+            threeDSecureClient = new ThreeDSecureClient(this, mBraintreeClient);
+            threeDSecureClient.setListener(this);
             String type = intent.getStringExtra("type");
             if (type.equals("tokenizeCreditCard")) {
                 tokenizeCreditCard();
@@ -62,118 +66,110 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
             result.putExtra("error", e);
             setResult(2, result);
             finish();
-            return;
         }
     }
 
     protected void tokenizeCreditCard() {
         Intent intent = getIntent();
-        CardBuilder builder = new CardBuilder()
-                .cardNumber(intent.getStringExtra("cardNumber"))
-                .expirationMonth(intent.getStringExtra("expirationMonth"))
-                .expirationYear(intent.getStringExtra("expirationYear"))
-                .cvv(intent.getStringExtra("cvv"))
-                .validate(false)
-                .cardholderName(intent.getStringExtra("cardholderName"));
-        Card.tokenize(braintreeFragment, builder);
+        Card card = new Card();
+        card.setNumber(intent.getStringExtra("cardNumber"));
+        card.setExpirationMonth(intent.getStringExtra("expirationMonth"));
+        card.setExpirationYear(intent.getStringExtra("expirationYear"));
+        card.setCvv(intent.getStringExtra("cvv"));
+        card.setShouldValidate(false);
+        card.setCardholderName(intent.getStringExtra("cardholderName"));
+
+        CardClient cardClient = new CardClient(new BraintreeClient(this, intent.getStringExtra("authorization")));
+        cardClient.tokenize(card, new CardTokenizeCallback() {
+            @Override
+            public void onResult(@Nullable com.braintreepayments.api.CardNonce cardNonce, @Nullable Exception error) {
+
+            }
+        });
     }
 
     protected void requestPaypalNonce() {
+        payPalClient = new PayPalClient(this, mBraintreeClient);
+        payPalClient.setListener(this);
+
         Intent intent = getIntent();
         String paypalIntent;
         switch (intent.getStringExtra("payPalPaymentIntent")) {
-            case PayPalRequest.INTENT_ORDER:
-                paypalIntent = PayPalRequest.INTENT_ORDER;
+            case PayPalPaymentIntent.ORDER:
+                paypalIntent = PayPalPaymentIntent.ORDER;
                 break;
-            case PayPalRequest.INTENT_SALE:
-                paypalIntent = PayPalRequest.INTENT_SALE;
+            case PayPalPaymentIntent.SALE:
+                paypalIntent = PayPalPaymentIntent.SALE;
                 break;
             default:
-                paypalIntent = PayPalRequest.INTENT_AUTHORIZE;
+                paypalIntent = PayPalPaymentIntent.AUTHORIZE;
                 break;
         }
-        String payPalPaymentUserAction = PayPalRequest.USER_ACTION_DEFAULT;
-        if (PayPalRequest.USER_ACTION_COMMIT.equals(intent.getStringExtra("payPalPaymentUserAction"))) {
-            payPalPaymentUserAction = PayPalRequest.USER_ACTION_COMMIT;
-        }
-        PayPalRequest request = new PayPalRequest(intent.getStringExtra("amount"))
-                .currencyCode(intent.getStringExtra("currencyCode"))
-                .displayName(intent.getStringExtra("displayName"))
-                .billingAgreementDescription(intent.getStringExtra("billingAgreementDescription"))
-                .intent(paypalIntent)
-                .userAction(payPalPaymentUserAction);
-
 
         if (intent.getStringExtra("amount") == null) {
             // Vault flow
-            PayPal.requestBillingAgreement(braintreeFragment, request);
+            PayPalVaultRequest payPalVaultRequest = new PayPalVaultRequest();
+            payPalVaultRequest.setBillingAgreementDescription(intent.getStringExtra("billingAgreementDescription"));
+
+            payPalClient.tokenizePayPalAccount(this, payPalVaultRequest);
         } else {
             // Checkout flow
-            PayPal.requestOneTimePayment(braintreeFragment, request);
+            PayPalCheckoutRequest payPalCheckoutRequest = new PayPalCheckoutRequest(intent.getStringExtra("amount"));
+            payPalCheckoutRequest.setCurrencyCode(intent.getStringExtra("currencyCode"));
+            payPalCheckoutRequest.setIntent(paypalIntent);
+
+            payPalClient.tokenizePayPalAccount(this, payPalCheckoutRequest);
         }
     }
 
     protected void requestGooglePayNonce() {
         Intent intent = getIntent();
+        googlePayClient = new GooglePayClient(this, mBraintreeClient);
+        googlePayClient.setListener(this);
+
         mTotalPrice = intent.getStringExtra("totalPrice");
         String currencyCode = intent.getStringExtra("currencyCode");
         String environment = intent.getStringExtra("environment");
-        GooglePaymentRequest googlePaymentRequest = new GooglePaymentRequest();
-        googlePaymentRequest
-                .billingAddressRequired(intent.getBooleanExtra("billingAddressRequired", false))
-                .transactionInfo(TransactionInfo.newBuilder()
+        GooglePayRequest googlePayRequest = new GooglePayRequest();
+        googlePayRequest.setBillingAddressRequired(intent.getBooleanExtra("billingAddressRequired", false));
+        googlePayRequest.setTransactionInfo(TransactionInfo.newBuilder()
                         .setTotalPrice(mTotalPrice)
                         .setCurrencyCode(currencyCode)
                         .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
-                        .build())
-                .environment(environment);
-        if (intent.getStringExtra("googleMerchantID") != null) {
-            googlePaymentRequest.googleMerchantId(intent.getStringExtra("googleMerchantID"));
-        }
-        GooglePayment.requestPayment(braintreeFragment, googlePaymentRequest);
+                        .build());
+        googlePayRequest.setEnvironment(environment);
+
+        googlePayClient.requestPayment(this, googlePayRequest);
     }
 
-    @Override
-    public void onPaymentMethodNonceCreated(PaymentMethodNonce paymentMethodNonce) {
-        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-        nonceMap.put("nonce", paymentMethodNonce.getNonce());
-        nonceMap.put("typeLabel", paymentMethodNonce.getTypeLabel());
-        nonceMap.put("description", paymentMethodNonce.getDescription());
-        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+    private void performThreeDSecureValidation(PaymentMethodNonce cardNonce) {
+        final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
+        threeDSecureRequest.setAmount(mTotalPrice);
+        threeDSecureRequest.setNonce(cardNonce.getString());
 
-        if (paymentMethodNonce instanceof PayPalAccountNonce) {
-            PayPalAccountNonce paypalAccountNonce = (PayPalAccountNonce) paymentMethodNonce;
-            nonceMap.put("paypalPayerId", paypalAccountNonce.getPayerId());
-        } else if (paymentMethodNonce instanceof GooglePaymentCardNonce) {
-            ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest()
-                    .amount(mTotalPrice)
-                    .nonce(paymentMethodNonce.getNonce())
-                    .versionRequested(ThreeDSecureRequest.VERSION_2);
-
-            ThreeDSecure.performVerification(braintreeFragment, threeDSecureRequest, new ThreeDSecureLookupListener() {
-                @Override
-                public void onLookupComplete(ThreeDSecureRequest threeDSecureRequest, ThreeDSecureLookup threeDSecureLookup) {
-                    ThreeDSecure.continuePerformVerification(braintreeFragment, threeDSecureRequest, threeDSecureLookup);
-                }
-            });
-        } else {
-            checkLiabilityShifted(paymentMethodNonce);
-        }
+        threeDSecureClient.performVerification(this, threeDSecureRequest, new ThreeDSecureResultCallback() {
+            @Override
+            public void onResult(@Nullable ThreeDSecureResult threeDSecureResult, @Nullable Exception error) {
+                threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this,
+                        threeDSecureRequest,
+                        threeDSecureResult
+                );
+            }
+        });
     }
 
     /**
      * the function to verify the card is three-D secure or not
+     *
      * @param paymentMethodNonce
      */
     private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
-        CardNonce cardNonce = (CardNonce)paymentMethodNonce;
+        CardNonce cardNonce = (CardNonce) paymentMethodNonce;
 
         boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
         boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
         HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-        nonceMap.put("nonce", paymentMethodNonce.getNonce());
-        nonceMap.put("typeLabel", paymentMethodNonce.getTypeLabel());
-        nonceMap.put("description", paymentMethodNonce.getDescription());
+        nonceMap.put("nonce", paymentMethodNonce.getString());
         nonceMap.put("isDefault", paymentMethodNonce.isDefault());
         nonceMap.put("liabilityShifted", liabilityShifted);
         nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
@@ -186,16 +182,79 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements Payment
     }
 
     @Override
-    public void onCancel(int requestCode) {
-        setResult(RESULT_CANCELED);
+    protected void onNewIntent(Intent newIntent) {
+        super.onNewIntent(newIntent);
+        // required if your activity's launch mode is "singleTop", "singleTask", or "singleInstance"
+        setIntent(newIntent);
+    }
+
+    @Override
+    public void onPayPalSuccess(@NonNull PayPalAccountNonce payPalAccountNonce) {
+        // send nonce to server
+        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+        nonceMap.put("nonce", payPalAccountNonce.getString());
+        nonceMap.put("isDefault", payPalAccountNonce.isDefault());
+        nonceMap.put("paypalPayerId", payPalAccountNonce.getPayerId());
+        Intent result = new Intent();
+        result.putExtra("type", "paymentMethodNonce");
+        result.putExtra("paymentMethodNonce", nonceMap);
+        setResult(RESULT_OK, result);
         finish();
     }
 
     @Override
-    public void onError(Exception error) {
-        Intent result = new Intent();
-        result.putExtra("error", error);
-        setResult(2, result);
-        finish();
+    public void onPayPalFailure(@NonNull Exception error) {
+        if (error instanceof UserCanceledException) {
+            // user canceled
+            setResult(RESULT_CANCELED);
+            finish();
+        } else {
+            // handle error
+            Intent result = new Intent();
+            result.putExtra("error", error);
+            setResult(2, result);
+            finish();
+        }
+    }
+
+    @Override
+    public void onThreeDSecureSuccess(@NonNull ThreeDSecureResult threeDSecureResult) {
+        checkLiabilityShifted(threeDSecureResult.getTokenizedCard());
+    }
+
+    @Override
+    public void onThreeDSecureFailure(@NonNull Exception error) {
+        if (error instanceof UserCanceledException) {
+            // user canceled
+            setResult(RESULT_CANCELED);
+            finish();
+        } else {
+            // handle error
+            Intent result = new Intent();
+            result.putExtra("error", error);
+            setResult(2, result);
+            finish();
+        }
+    }
+
+    @Override
+    public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
+        // send nonce to server
+        performThreeDSecureValidation(paymentMethodNonce);
+    }
+
+    @Override
+    public void onGooglePayFailure(@NonNull Exception error) {
+        if (error instanceof UserCanceledException) {
+            // user canceled
+            setResult(RESULT_CANCELED);
+            finish();
+        } else {
+            // handle error
+            Intent result = new Intent();
+            result.putExtra("error", error);
+            setResult(2, result);
+            finish();
+        }
     }
 }

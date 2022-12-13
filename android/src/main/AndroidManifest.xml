@@ -3,20 +3,19 @@
     package="com.example.flutter_braintree">
 
     <application>
-        <activity android:name=".FlutterBraintreeCustom"
-            android:exported="true"
-            android:theme="@style/bt_transparent_activity">
-        </activity>
-        <activity android:name="com.braintreepayments.api.BraintreeBrowserSwitchActivity"
-            android:launchMode="singleTask"
+        <activity
+            android:name=".FlutterBraintreeDropInActivity"
+            android:theme="@style/bt_transparent_activity"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${applicationId}.braintree" />
-            </intent-filter>
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
         </activity>
+        <activity
+            android:name=".FlutterBraintreeCustom"
+            android:exported="true"
+            android:theme="@style/bt_transparent_activity"></activity>
+
         <meta-data
             android:name="com.google.android.gms.wallet.api.enabled"
             android:value="true" />

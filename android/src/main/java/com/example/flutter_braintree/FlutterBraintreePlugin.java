@@ -23,6 +23,8 @@ public class FlutterBraintreePlugin implements FlutterPlugin, ActivityAware, Met
 
   private FlutterBraintreeDropIn dropIn;
 
+  /** Plugin registration. */
+  @SuppressWarnings("deprecation")
   public static void registerWith(Registrar registrar) {
     FlutterBraintreeDropIn.registerWith(registrar);
     final MethodChannel channel = new MethodChannel(registrar.messenger(), "flutter_braintree.custom");
@@ -117,7 +119,6 @@ public class FlutterBraintreePlugin implements FlutterPlugin, ActivityAware, Met
       Map request = (Map) call.argument("request");
       intent.putExtra("totalPrice", (String) request.get("totalPrice"));
       intent.putExtra("currencyCode", (String) request.get("currencyCode"));
-      intent.putExtra("googleMerchantID", (String) request.get("googleMerchantID"));
       intent.putExtra("billingAddressRequired", (Boolean) request.get("billingAddressRequired"));
       intent.putExtra("environment", (String) request.get("environment"));
       activity.startActivityForResult(intent, CUSTOM_ACTIVITY_REQUEST_CODE);
