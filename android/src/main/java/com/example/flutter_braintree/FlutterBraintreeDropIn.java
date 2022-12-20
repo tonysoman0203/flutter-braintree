@@ -95,6 +95,7 @@ public class FlutterBraintreeDropIn implements FlutterPlugin, ActivityAware, Met
 
       if (call.argument("googlePaymentRequest") != null) {
         HashMap<String, Object> arg = call.argument("googlePaymentRequest");
+        if (arg == null || arg.isEmpty()) return;
         String currencyCode = (String) arg.get("currencyCode");
         String environment = (String) arg.get("environment");
         String totalPrice = (String) arg.get("totalPrice");

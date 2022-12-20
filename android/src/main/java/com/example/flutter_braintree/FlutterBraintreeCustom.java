@@ -203,26 +203,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
     @Override
     public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
         // send nonce to server
-        GooglePayCardNonce googlePayCardNonce = (GooglePayCardNonce)paymentMethodNonce;
-        if (!googlePayCardNonce.isNetworkTokenized()) {
-            // eligible for 3DS Verification
-            performThreeDSecureValidation(paymentMethodNonce);
-        } else {
-            HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-            String nonce = paymentMethodNonce.getString();
-//            boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
-//            boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
-            nonceMap.put("nonce", nonce);
-            nonceMap.put("isDefault", paymentMethodNonce.isDefault());
-            nonceMap.put("liabilityShifted", true);
-            nonceMap.put("liabilityShiftPossible", true);
-
-            Intent result = new Intent();
-            result.putExtra("type", "paymentMethodNonce");
-            result.putExtra("paymentMethodNonce", nonceMap);
-            setResult(RESULT_OK, result);
-            finish();
-        }
+        performThreeDSecureValidation(paymentMethodNonce);
     }
 
     @Override
@@ -263,7 +244,6 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
     }
 
     private void performThreeDSecureValidation(final PaymentMethodNonce cardNonce) {
-
         final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
         threeDSecureRequest.setAmount(mTotalPrice);
         threeDSecureRequest.setNonce(cardNonce.getString());
@@ -291,17 +271,19 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
      * @param paymentMethodNonce
      */
     private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
-        String nonce;
         HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-        CardNonce cardNonce = (CardNonce) paymentMethodNonce;
-        nonce = cardNonce.getString();
-        boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
-        boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
-        nonceMap.put("nonce", nonce);
-        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
-        nonceMap.put("liabilityShifted", liabilityShifted);
-        nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
+        boolean liabilityShifted;
+        boolean liabilityShiftPossible;
+        if (paymentMethodNonce instanceof CardNonce) {
+            CardNonce cardNonce = (CardNonce) paymentMethodNonce;
+            liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
+            liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
+            nonceMap.put("liabilityShifted", liabilityShifted);
+            nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
+        }
 
+        nonceMap.put("nonce", paymentMethodNonce.getString());
+        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
         Intent result = new Intent();
         result.putExtra("type", "paymentMethodNonce");
         result.putExtra("paymentMethodNonce", nonceMap);
