@@ -6,12 +6,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.braintreepayments.api.BraintreeClient;
 import com.braintreepayments.api.Card;
 import com.braintreepayments.api.CardClient;
 import com.braintreepayments.api.CardNonce;
 import com.braintreepayments.api.CardTokenizeCallback;
+import com.braintreepayments.api.GooglePayCardNonce;
 import com.braintreepayments.api.GooglePayClient;
 import com.braintreepayments.api.GooglePayListener;
 import com.braintreepayments.api.GooglePayRequest;
@@ -41,25 +43,35 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
     private GooglePayClient googlePayClient;
     private PayPalClient payPalClient;
     private String mTotalPrice;
-
+    private static final String TAG = FlutterBraintreeCustom.class.getSimpleName();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_flutter_braintree_custom);
         try {
             Intent intent = getIntent();
-            mBraintreeClient = new BraintreeClient(this, intent.getStringExtra("authorization"));
+            String authorization = intent.getStringExtra("authorization");
+            Log.d(TAG, "authorization = "+authorization);
+            if (authorization == null) {
+                throw new Exception("Missing Authorization");
+            }
+            mBraintreeClient = new BraintreeClient(this, authorization);
             threeDSecureClient = new ThreeDSecureClient(this, mBraintreeClient);
             threeDSecureClient.setListener(this);
             String type = intent.getStringExtra("type");
-            if (type.equals("tokenizeCreditCard")) {
-                tokenizeCreditCard();
-            } else if (type.equals("requestPaypalNonce")) {
-                requestPaypalNonce();
-            } else if (type.equals("requestGooglePayNonce")) {
-                requestGooglePayNonce();
-            } else {
-                throw new Exception("Invalid request type: " + type);
+            Log.d(TAG, "type = "+type);
+            switch (type) {
+                case "tokenizeCreditCard":
+                    tokenizeCreditCard();
+                    break;
+                case "requestPaypalNonce":
+                    requestPaypalNonce();
+                    break;
+                case "requestGooglePayNonce":
+                    requestGooglePayNonce();
+                    break;
+                default:
+                    throw new Exception("Invalid request type: " + type);
             }
         } catch (Exception e) {
             Intent result = new Intent();
@@ -128,8 +140,16 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
         googlePayClient.setListener(this);
 
         mTotalPrice = intent.getStringExtra("totalPrice");
+        Log.d(TAG, "mTotalPrice = "+mTotalPrice);
+        if (mTotalPrice == null) return;
+
         String currencyCode = intent.getStringExtra("currencyCode");
+        Log.d(TAG, "currencyCode = "+currencyCode);
+        if (currencyCode == null) return;
+
         String environment = intent.getStringExtra("environment");
+        Log.d(TAG, "environment = "+environment);
+
         GooglePayRequest googlePayRequest = new GooglePayRequest();
         googlePayRequest.setBillingAddressRequired(intent.getBooleanExtra("billingAddressRequired", false));
         googlePayRequest.setTransactionInfo(TransactionInfo.newBuilder()
@@ -138,47 +158,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
                         .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
                         .build());
         googlePayRequest.setEnvironment(environment);
-
         googlePayClient.requestPayment(this, googlePayRequest);
-    }
-
-    private void performThreeDSecureValidation(PaymentMethodNonce cardNonce) {
-        final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
-        threeDSecureRequest.setAmount(mTotalPrice);
-        threeDSecureRequest.setNonce(cardNonce.getString());
-
-        threeDSecureClient.performVerification(this, threeDSecureRequest, new ThreeDSecureResultCallback() {
-            @Override
-            public void onResult(@Nullable ThreeDSecureResult threeDSecureResult, @Nullable Exception error) {
-                threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this,
-                        threeDSecureRequest,
-                        threeDSecureResult
-                );
-            }
-        });
-    }
-
-    /**
-     * the function to verify the card is three-D secure or not
-     *
-     * @param paymentMethodNonce
-     */
-    private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
-        CardNonce cardNonce = (CardNonce) paymentMethodNonce;
-
-        boolean liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
-        boolean liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
-        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-        nonceMap.put("nonce", paymentMethodNonce.getString());
-        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
-        nonceMap.put("liabilityShifted", liabilityShifted);
-        nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
-
-        Intent result = new Intent();
-        result.putExtra("type", "paymentMethodNonce");
-        result.putExtra("paymentMethodNonce", nonceMap);
-        setResult(RESULT_OK, result);
-        finish();
     }
 
     @Override
@@ -218,26 +198,6 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
     }
 
     @Override
-    public void onThreeDSecureSuccess(@NonNull ThreeDSecureResult threeDSecureResult) {
-        checkLiabilityShifted(threeDSecureResult.getTokenizedCard());
-    }
-
-    @Override
-    public void onThreeDSecureFailure(@NonNull Exception error) {
-        if (error instanceof UserCanceledException) {
-            // user canceled
-            setResult(RESULT_CANCELED);
-            finish();
-        } else {
-            // handle error
-            Intent result = new Intent();
-            result.putExtra("error", error);
-            setResult(2, result);
-            finish();
-        }
-    }
-
-    @Override
     public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
         // send nonce to server
         performThreeDSecureValidation(paymentMethodNonce);
@@ -256,5 +216,75 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
             setResult(2, result);
             finish();
         }
+    }
+
+    @Override
+    public void onThreeDSecureSuccess(@NonNull ThreeDSecureResult threeDSecureResult) {
+        if (threeDSecureResult.getTokenizedCard() != null) {
+            checkLiabilityShifted(threeDSecureResult.getTokenizedCard());
+        }
+    }
+
+    @Override
+    public void onThreeDSecureFailure(@NonNull Exception error) {
+        if (error instanceof UserCanceledException) {
+            // user canceled
+            setResult(RESULT_CANCELED);
+            finish();
+        } else {
+            // handle error
+            Intent result = new Intent();
+            result.putExtra("error", error);
+            setResult(2, result);
+            finish();
+        }
+    }
+
+    private void performThreeDSecureValidation(final PaymentMethodNonce cardNonce) {
+        final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
+        threeDSecureRequest.setAmount(mTotalPrice);
+        threeDSecureRequest.setNonce(cardNonce.getString());
+        threeDSecureClient.performVerification(this, threeDSecureRequest, new ThreeDSecureResultCallback() {
+            @Override
+            public void onResult(@Nullable ThreeDSecureResult threeDSecureResult, @Nullable Exception error) {
+                if (threeDSecureResult != null) {
+                    // examine lookup response (if necessary), then continue verification
+                    threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this,
+                            threeDSecureRequest,
+                            threeDSecureResult
+                    );
+                } else {
+                    // handle error
+                    error.printStackTrace();
+                    Log.e("onResult", error.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * the function to verify the card is three-D secure or not
+     *
+     * @param paymentMethodNonce
+     */
+    private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
+        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+        boolean liabilityShifted;
+        boolean liabilityShiftPossible;
+        if (paymentMethodNonce instanceof CardNonce) {
+            CardNonce cardNonce = (CardNonce) paymentMethodNonce;
+            liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
+            liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
+            nonceMap.put("liabilityShifted", liabilityShifted);
+            nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
+        }
+
+        nonceMap.put("nonce", paymentMethodNonce.getString());
+        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+        Intent result = new Intent();
+        result.putExtra("type", "paymentMethodNonce");
+        result.putExtra("paymentMethodNonce", nonceMap);
+        setResult(RESULT_OK, result);
+        finish();
     }
 }
