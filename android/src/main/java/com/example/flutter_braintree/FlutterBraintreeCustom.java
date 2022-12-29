@@ -145,10 +145,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
 
         String currencyCode = intent.getStringExtra("currencyCode");
         Log.d(TAG, "currencyCode = "+currencyCode);
-        if (currencyCode == null) {
-            // default currency: HKD
-            currencyCode = "HKD";
-        }
+        if (currencyCode == null) return;
 
         String environment = intent.getStringExtra("environment");
         Log.d(TAG, "environment = "+environment);
