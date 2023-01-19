@@ -37,11 +37,11 @@ import com.google.android.gms.wallet.WalletConstants;
 import java.util.HashMap;
 
 
-public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalListener, ThreeDSecureListener, GooglePayListener {
+public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDSecureListener, GooglePayListener {
     private BraintreeClient mBraintreeClient;
     private ThreeDSecureClient threeDSecureClient;
     private GooglePayClient googlePayClient;
-    private PayPalClient payPalClient;
+//    private PayPalClient payPalClient;
     private String mTotalPrice;
     private static final String TAG = FlutterBraintreeCustom.class.getSimpleName();
     @Override
@@ -61,12 +61,12 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
             String type = intent.getStringExtra("type");
             Log.d(TAG, "type = "+type);
             switch (type) {
-                case "tokenizeCreditCard":
-                    tokenizeCreditCard();
-                    break;
-                case "requestPaypalNonce":
-                    requestPaypalNonce();
-                    break;
+//                case "tokenizeCreditCard":
+//                    tokenizeCreditCard();
+//                    break;
+//                case "requestPaypalNonce":
+//                    requestPaypalNonce();
+//                    break;
                 case "requestGooglePayNonce":
                     requestGooglePayNonce();
                     break;
@@ -101,6 +101,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
     }
 
     protected void requestPaypalNonce() {
+        /*
         payPalClient = new PayPalClient(this, mBraintreeClient);
         payPalClient.setListener(this);
 
@@ -132,6 +133,7 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
 
             payPalClient.tokenizePayPalAccount(this, payPalCheckoutRequest);
         }
+        */
     }
 
     protected void requestGooglePayNonce() {
@@ -168,34 +170,34 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements PayPalL
         setIntent(newIntent);
     }
 
-    @Override
-    public void onPayPalSuccess(@NonNull PayPalAccountNonce payPalAccountNonce) {
-        // send nonce to server
-        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-        nonceMap.put("nonce", payPalAccountNonce.getString());
-        nonceMap.put("isDefault", payPalAccountNonce.isDefault());
-        nonceMap.put("paypalPayerId", payPalAccountNonce.getPayerId());
-        Intent result = new Intent();
-        result.putExtra("type", "paymentMethodNonce");
-        result.putExtra("paymentMethodNonce", nonceMap);
-        setResult(RESULT_OK, result);
-        finish();
-    }
+//    @Override
+//    public void onPayPalSuccess(@NonNull PayPalAccountNonce payPalAccountNonce) {
+//        // send nonce to server
+//        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+//        nonceMap.put("nonce", payPalAccountNonce.getString());
+//        nonceMap.put("isDefault", payPalAccountNonce.isDefault());
+//        nonceMap.put("paypalPayerId", payPalAccountNonce.getPayerId());
+//        Intent result = new Intent();
+//        result.putExtra("type", "paymentMethodNonce");
+//        result.putExtra("paymentMethodNonce", nonceMap);
+//        setResult(RESULT_OK, result);
+//        finish();
+//    }
 
-    @Override
-    public void onPayPalFailure(@NonNull Exception error) {
-        if (error instanceof UserCanceledException) {
-            // user canceled
-            setResult(RESULT_CANCELED);
-            finish();
-        } else {
-            // handle error
-            Intent result = new Intent();
-            result.putExtra("error", error);
-            setResult(2, result);
-            finish();
-        }
-    }
+//    @Override
+//    public void onPayPalFailure(@NonNull Exception error) {
+//        if (error instanceof UserCanceledException) {
+//            // user canceled
+//            setResult(RESULT_CANCELED);
+//            finish();
+//        } else {
+//            // handle error
+//            Intent result = new Intent();
+//            result.putExtra("error", error);
+//            setResult(2, result);
+//            finish();
+//        }
+//    }
 
     @Override
     public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
