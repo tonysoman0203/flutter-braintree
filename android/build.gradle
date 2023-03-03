@@ -46,7 +46,7 @@ dependencies {
     def brantreeVersion = '4.23.1'
     def googlePayVersion = '19.1.0'
 
-    implementation 'com.braintreepayments.api:drop-in:6.4.0'
+    implementation 'com.braintreepayments.api:drop-in:6.5.0'
     // to perform 3DS verification
     implementation "com.braintreepayments.api:three-d-secure:$brantreeVersion"
     implementation "com.braintreepayments.api:paypal:$brantreeVersion"
