@@ -170,7 +170,54 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDS
         setIntent(newIntent);
     }
 
-//    @Override
+    private void performThreeDSecureValidation(final PaymentMethodNonce paymentMethodNonce) {
+        final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
+        threeDSecureRequest.setAmount(mTotalPrice);
+        threeDSecureRequest.setNonce(paymentMethodNonce.getString());
+        threeDSecureClient.performVerification(this, threeDSecureRequest, new ThreeDSecureResultCallback() {
+            @Override
+            public void onResult(@Nullable ThreeDSecureResult threeDSecureResult, @Nullable Exception error) {
+                if (threeDSecureResult != null) {
+                    threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this, threeDSecureRequest, threeDSecureResult);
+                } else {
+                    error.printStackTrace();
+                    Log.e(TAG, error.getMessage());
+                    Intent result = new Intent();
+                    result.putExtra("error", error);
+                    setResult(2, result);
+                    finish();
+                }
+            }
+        });
+    }
+
+    /**
+     * the function to verify the card is three-D secure or not
+     *
+     * @param paymentMethodNonce
+     */
+    private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
+        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+        boolean liabilityShifted;
+        boolean liabilityShiftPossible;
+        if (paymentMethodNonce instanceof CardNonce) {
+            CardNonce cardNonce = (CardNonce) paymentMethodNonce;
+            liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
+            liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
+            nonceMap.put("liabilityShifted", liabilityShifted);
+            nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
+        }
+
+        nonceMap.put("nonce", paymentMethodNonce.getString());
+        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+        Intent result = new Intent();
+        result.putExtra("type", "paymentMethodNonce");
+        result.putExtra("paymentMethodNonce", nonceMap);
+        setResult(RESULT_OK, result);
+        finish();
+    }
+
+    //    @Override
 //    public void onPayPalSuccess(@NonNull PayPalAccountNonce payPalAccountNonce) {
 //        // send nonce to server
 //        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
@@ -202,7 +249,23 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDS
     @Override
     public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
         // send nonce to server
-        performThreeDSecureValidation(paymentMethodNonce);
+        if (paymentMethodNonce instanceof GooglePayCardNonce) {
+            GooglePayCardNonce googlePayCardNonce = (GooglePayCardNonce) paymentMethodNonce;
+            Log.d(TAG,"googlePayCardNonce.isNetworkTokenized() " +googlePayCardNonce.isNetworkTokenized());
+            if (!googlePayCardNonce.isNetworkTokenized()) {
+                performThreeDSecureValidation(paymentMethodNonce);
+            } else {
+                // skip 3DS2 Secure if Google Pay network tokenized
+                HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+                nonceMap.put("nonce", paymentMethodNonce.getString());
+                nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+                Intent result = new Intent();
+                result.putExtra("type", "paymentMethodNonce");
+                result.putExtra("paymentMethodNonce", nonceMap);
+                setResult(RESULT_OK, result);
+                finish();
+            }
+        }
     }
 
     @Override
@@ -240,53 +303,5 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDS
             setResult(2, result);
             finish();
         }
-    }
-
-    private void performThreeDSecureValidation(final PaymentMethodNonce cardNonce) {
-        final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
-        threeDSecureRequest.setAmount(mTotalPrice);
-        threeDSecureRequest.setNonce(cardNonce.getString());
-        threeDSecureClient.performVerification(this, threeDSecureRequest, new ThreeDSecureResultCallback() {
-            @Override
-            public void onResult(@Nullable ThreeDSecureResult threeDSecureResult, @Nullable Exception error) {
-                if (threeDSecureResult != null) {
-                    // examine lookup response (if necessary), then continue verification
-                    threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this,
-                            threeDSecureRequest,
-                            threeDSecureResult
-                    );
-                } else {
-                    // handle error
-                    error.printStackTrace();
-                    Log.e("onResult", error.getMessage());
-                }
-            }
-        });
-    }
-
-    /**
-     * the function to verify the card is three-D secure or not
-     *
-     * @param paymentMethodNonce
-     */
-    private void checkLiabilityShifted(PaymentMethodNonce paymentMethodNonce) {
-        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
-        boolean liabilityShifted;
-        boolean liabilityShiftPossible;
-        if (paymentMethodNonce instanceof CardNonce) {
-            CardNonce cardNonce = (CardNonce) paymentMethodNonce;
-            liabilityShifted = cardNonce.getThreeDSecureInfo().isLiabilityShifted();
-            liabilityShiftPossible = cardNonce.getThreeDSecureInfo().isLiabilityShiftPossible();
-            nonceMap.put("liabilityShifted", liabilityShifted);
-            nonceMap.put("liabilityShiftPossible", liabilityShiftPossible);
-        }
-
-        nonceMap.put("nonce", paymentMethodNonce.getString());
-        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
-        Intent result = new Intent();
-        result.putExtra("type", "paymentMethodNonce");
-        result.putExtra("paymentMethodNonce", nonceMap);
-        setResult(RESULT_OK, result);
-        finish();
     }
 }
