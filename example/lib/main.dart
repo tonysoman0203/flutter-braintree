@@ -26,9 +26,9 @@ class _MyAppState extends State<MyApp> {
           children: <Widget>[
             Text('Nonce: ${nonce.nonce}'),
             SizedBox(height: 16),
-            Text('Type label: ${nonce.typeLabel}'),
+            // Text('Type label: ${nonce.typeLabel}'),
             SizedBox(height: 16),
-            Text('Description: ${nonce.description}'),
+            // Text('Description: ${nonce.description}'),
           ],
         ),
       ),
