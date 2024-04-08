@@ -11,10 +11,13 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <activity android:name=".DropInActivity"
+            android:theme="@style/bt_transparent_activity">
+        </activity>
         <activity
             android:name=".FlutterBraintreeCustom"
             android:exported="true"
-            android:theme="@style/bt_transparent_activity"></activity>
+            android:theme="@style/bt_transparent_activity"/>
 
         <meta-data
             android:name="com.google.android.gms.wallet.api.enabled"

@@ -3,6 +3,8 @@ class BraintreeDropInRequest {
     this.clientToken,
     this.tokenizationKey,
     this.amount,
+    this.billingAddress,
+    this.email,
     this.collectDeviceData = false,
     this.kountMerchantId,
     this.requestThreeDSecureVerification = false,
@@ -25,8 +27,14 @@ class BraintreeDropInRequest {
   /// Either [clientToken] or [tokenizationKey] must be set.
   String? tokenizationKey;
 
+  ///Additional Information about the user to trigger 3ds 2.0
+  BraintreeBillingAddress? billingAddress;
+
   /// Amount for the transaction. This is only used for 3D secure verfications.
   String? amount;
+
+  /// Email of the user. this is used to icnrease the possibilities of success of 3ds 2.0
+  String? email;
 
   /// Whether the Drop-in should collect and return device data for fraud prevention.
   bool collectDeviceData;
@@ -72,6 +80,8 @@ class BraintreeDropInRequest {
     if (clientToken != null) 'clientToken': clientToken,
     if (tokenizationKey != null) 'tokenizationKey': tokenizationKey,
     if (amount != null) 'amount': amount,
+    if (email != null) 'email': email,
+    if (billingAddress != null) 'billingAddress': billingAddress!.toJson(),
     'collectDeviceData': collectDeviceData,
     'kountMerchantId': kountMerchantId,
     'requestThreeDSecureVerification': requestThreeDSecureVerification,
@@ -85,6 +95,41 @@ class BraintreeDropInRequest {
     'maskSecurityCode': maskSecurityCode,
     'vaultManagerEnabled': vaultManagerEnabled,
   };
+}
+
+class BraintreeBillingAddress {
+  final String? givenName;
+  final String? surname;
+  final String? phoneNumber;
+  final String? streetAddress;
+  final String? extendedAddress;
+  final String? locality;
+  final String? region;
+  final String? postalCode;
+  final String? countryCodeAlpha2;
+
+  BraintreeBillingAddress(
+      {this.givenName,
+      this.surname,
+      this.phoneNumber,
+      this.streetAddress,
+      this.extendedAddress,
+      this.locality,
+      this.region,
+      this.postalCode,
+      this.countryCodeAlpha2});
+
+  Map<String, dynamic> toJson() => {
+        'givenName': givenName,
+        'surname': surname,
+        'phoneNumber': phoneNumber,
+        'streetAddress': streetAddress,
+        'extendedAddress': extendedAddress,
+        'locality': locality,
+        'region': region,
+        'postalCode': postalCode,
+        'countryCodeAlpha2': countryCodeAlpha2
+      };
 }
 
 class BraintreeCreditCardRequest {
@@ -112,12 +157,12 @@ class BraintreeCreditCardRequest {
   String? cardholderName;
 
   Map<String, dynamic> toJson() => {
-    'cardNumber': cardNumber,
-    'expirationMonth': expirationMonth,
-    'expirationYear': expirationYear,
-    'cvv': cvv,
-    'cardholderName': cardholderName
-  };
+        'cardNumber': cardNumber,
+        'expirationMonth': expirationMonth,
+        'expirationYear': expirationYear,
+        'cvv': cvv,
+        'cardholderName': cardholderName
+      };
 }
 
 class BraintreeGooglePaymentRequest {
@@ -148,7 +193,8 @@ class BraintreeGooglePaymentRequest {
     'totalPrice': totalPrice,
     'currencyCode': currencyCode,
     'billingAddressRequired': billingAddressRequired,
-    'environment' : environment ?? "TEST"
+    'environment' : environment ?? "TEST",
+    if (googleMerchantID != null) 'googleMerchantID': googleMerchantID,
   };
 }
 
@@ -184,14 +230,14 @@ class BraintreePayPalRequest {
 
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-    if (amount != null) 'amount': amount,
-    if (currencyCode != null) 'currencyCode': currencyCode,
-    if (displayName != null) 'displayName': displayName,
-    if (billingAgreementDescription != null)
-      'billingAgreementDescription': billingAgreementDescription,
-    'payPalPaymentIntent': payPalPaymentIntent.name,
-    'payPalPaymentUserAction': payPalPaymentUserAction.name,
-  };
+        if (amount != null) 'amount': amount,
+        if (currencyCode != null) 'currencyCode': currencyCode,
+        if (displayName != null) 'displayName': displayName,
+        if (billingAgreementDescription != null)
+          'billingAgreementDescription': billingAgreementDescription,
+        'payPalPaymentIntent': payPalPaymentIntent.name,
+        'payPalPaymentUserAction': payPalPaymentUserAction.name,
+      };
 }
 
 enum PayPalPaymentUserAction {
@@ -277,10 +323,10 @@ class ApplePaySummaryItem {
 
   /// Converts this summary item object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-    'label': label,
-    'amount': amount,
-    'type': type.rawValue,
-  };
+        'label': label,
+        'amount': amount,
+        'type': type.rawValue,
+      };
 }
 
 class BraintreeApplePayRequest {
@@ -313,11 +359,12 @@ class BraintreeApplePayRequest {
 
   /// Converts this request object into a JSON-encodable format.
   Map<String, dynamic> toJson() => {
-    'paymentSummaryItems': paymentSummaryItems.map((item) => item.toJson()).toList(),
-    'currencyCode': currencyCode,
-    'displayName': displayName,
-    'countryCode': countryCode,
-    'merchantIdentifier': merchantIdentifier,
-    'supportedNetworks': supportedNetworks.map((e) => e.rawValue).toList(),
-  };
+        'paymentSummaryItems':
+            paymentSummaryItems.map((item) => item.toJson()).toList(),
+        'currencyCode': currencyCode,
+        'displayName': displayName,
+        'countryCode': countryCode,
+        'merchantIdentifier': merchantIdentifier,
+        'supportedNetworks': supportedNetworks.map((e) => e.rawValue).toList(),
+      };
 }

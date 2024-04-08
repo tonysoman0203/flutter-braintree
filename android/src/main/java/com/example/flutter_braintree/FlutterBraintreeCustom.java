@@ -1,12 +1,12 @@
 package com.example.flutter_braintree;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.braintreepayments.api.BraintreeClient;
 import com.braintreepayments.api.CardNonce;
@@ -14,6 +14,7 @@ import com.braintreepayments.api.GooglePayCardNonce;
 import com.braintreepayments.api.GooglePayClient;
 import com.braintreepayments.api.GooglePayListener;
 import com.braintreepayments.api.GooglePayRequest;
+import com.braintreepayments.api.PayPalAccountNonce;
 import com.braintreepayments.api.PaymentMethodNonce;
 import com.braintreepayments.api.ThreeDSecureClient;
 import com.braintreepayments.api.ThreeDSecureListener;
@@ -24,9 +25,7 @@ import com.braintreepayments.api.UserCanceledException;
 import com.google.android.gms.wallet.TransactionInfo;
 import com.google.android.gms.wallet.WalletConstants;
 
-
 import java.util.HashMap;
-
 
 public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDSecureListener, GooglePayListener {
     private BraintreeClient mBraintreeClient;
@@ -140,12 +139,40 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDS
 
         nonceMap.put("nonce", paymentMethodNonce.getString());
         nonceMap.put("isDefault", paymentMethodNonce.isDefault());
-        Intent result = new Intent();
-        result.putExtra("type", "paymentMethodNonce");
-        result.putExtra("paymentMethodNonce", nonceMap);
-        setResult(RESULT_OK, result);
-        finish();
     }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+
+//    public void onPaymentMethodNonceCreated(PaymentMethodNonce paymentMethodNonce) {
+//        HashMap<String, Object> nonceMap = new HashMap<String, Object>();
+//        nonceMap.put("nonce", paymentMethodNonce.getString());
+//        nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+//        if (paymentMethodNonce instanceof PayPalAccountNonce) {
+//            PayPalAccountNonce paypalAccountNonce = (PayPalAccountNonce) paymentMethodNonce;
+//            nonceMap.put("paypalPayerId", paypalAccountNonce.getPayerId());
+//            nonceMap.put("typeLabel", "PayPal");
+//            nonceMap.put("description", paypalAccountNonce.getEmail());
+//        }else if(paymentMethodNonce instanceof CardNonce){
+//            CardNonce cardNonce = (CardNonce) paymentMethodNonce;
+//            nonceMap.put("typeLabel", cardNonce.getCardType());
+//            nonceMap.put("description", "ending in ••" + cardNonce.getLastTwo());
+//        }
+//        Intent result = new Intent();
+//        result.putExtra("type", "paymentMethodNonce");
+//        result.putExtra("paymentMethodNonce", nonceMap);
+//        setResult(RESULT_OK, result);
+//        finish();
+//    }
 
     @Override
     public void onGooglePaySuccess(@NonNull PaymentMethodNonce paymentMethodNonce) {
