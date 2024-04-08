@@ -103,19 +103,16 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDS
         final ThreeDSecureRequest threeDSecureRequest = new ThreeDSecureRequest();
         threeDSecureRequest.setAmount(mTotalPrice);
         threeDSecureRequest.setNonce(paymentMethodNonce.getString());
-        threeDSecureClient.performVerification(this, threeDSecureRequest, new ThreeDSecureResultCallback() {
-            @Override
-            public void onResult(@Nullable ThreeDSecureResult threeDSecureResult, @Nullable Exception error) {
-                if (threeDSecureResult != null) {
-                    threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this, threeDSecureRequest, threeDSecureResult);
-                } else {
-                    error.printStackTrace();
-                    Log.e(TAG, error.getMessage());
-                    Intent result = new Intent();
-                    result.putExtra("error", error);
-                    setResult(2, result);
-                    finish();
-                }
+        threeDSecureClient.performVerification(this, threeDSecureRequest, (threeDSecureResult, error) -> {
+            if (threeDSecureResult != null) {
+                threeDSecureClient.continuePerformVerification(FlutterBraintreeCustom.this, threeDSecureRequest, threeDSecureResult);
+            } else {
+                error.printStackTrace();
+                Log.e(TAG, error.getMessage());
+                Intent result = new Intent();
+                result.putExtra("error", error);
+                setResult(2, result);
+                finish();
             }
         });
     }
@@ -139,6 +136,11 @@ public class FlutterBraintreeCustom extends AppCompatActivity implements ThreeDS
 
         nonceMap.put("nonce", paymentMethodNonce.getString());
         nonceMap.put("isDefault", paymentMethodNonce.isDefault());
+        Intent result = new Intent();
+        result.putExtra("type", "paymentMethodNonce");
+        result.putExtra("paymentMethodNonce", nonceMap);
+        setResult(RESULT_OK, result);
+        finish();
     }
 
     @Override
