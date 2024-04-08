@@ -26,12 +26,7 @@ class FlutterBraintreeDropInActivity : AppCompatActivity(), DropInListener {
         setContentView(R.layout.activity_flutter_braintree_drop_in)
 
         // DropInClient can also be instantiated with a tokenization key
-        val authorization = if (intent.extras?.getString("clientToken") != null)
-            intent.extras?.getString("clientToken")
-        else if (intent.extras?.getString("tokenizationKey") != null)
-            intent.extras?.getString("tokenizationKey")
-        else
-            null
+        val authorization = intent.extras?.getString("token")
 
         Log.d(TAG, authorization ?: "")
 
@@ -58,6 +53,7 @@ class FlutterBraintreeDropInActivity : AppCompatActivity(), DropInListener {
 
 
             val threeDSecureRequest = ThreeDSecureRequest()
+            threeDSecureRequest.versionRequested = ThreeDSecureRequest.VERSION_2;
             threeDSecureRequest.amount = getString("amount") as String
             dropInRequest.threeDSecureRequest = threeDSecureRequest
 

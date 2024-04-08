@@ -6,7 +6,18 @@
     android:layout_height="wrap_content"
     android:alpha="0.0"
     android:visibility="invisible"
-    tools:context=".FlutterBraintreeCustom"
-    tools:visibility="invisible">
+    tools:context=".FlutterBraintreeDropInActivity"
+    tools:visibility="visible">
 
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="Button"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
